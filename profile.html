@@ -15,7 +15,6 @@
         .input-group { text-align: left; margin-bottom: 20px; }
         .input-group label { display: block; font-weight: bold; color: #002366; margin-bottom: 5px; margin-left: 5px; font-size: 14px; }
         .input-group input, .input-group textarea { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd; background: #f9f9f9; box-sizing: border-box; font-size: 16px; outline: none; }
-        /* Style for the read-only email */
         .email-field { background: #ececec !important; color: #777; cursor: not-allowed; }
         .save-btn { width: 100%; padding: 18px; border-radius: 15px; border: none; background: #002366; color: white; font-weight: bold; font-size: 18px; cursor: pointer; transition: 0.3s; }
         .save-btn:active { transform: scale(0.98); }
@@ -57,7 +56,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 <script src="script.js"></script>
 
 <script>
@@ -65,7 +63,7 @@
         if (user) {
             document.getElementById('user-email').value = user.email;
             
-            // Query by Email to stay consistent with Admin/Dashboard logic
+            // Sync user data using Email as the Document ID
             db.collection('users').doc(user.email).onSnapshot(doc => {
                 if (doc.exists) {
                     const u = doc.data();
@@ -80,32 +78,25 @@
         }
     });
 
+    // Bypass Firebase Storage by using a direct Image Link
     function chooseImage() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = e => {
-            const file = e.target.files[0];
+        const url = prompt("Paste the direct link (URL) to your profile picture:");
+        if (url && url.trim() !== "") {
             const user = auth.currentUser;
             if(!user) return;
 
-            const ref = firebase.storage().ref('profiles/' + user.email);
-            
-            alert("Uploading image... Please wait.");
-            
-            ref.put(file).then(() => {
-                ref.getDownloadURL().then(url => {
-                    db.collection('users').doc(user.email).update({ profilePic: url })
-                    .then(() => alert("Photo Updated Successfully!"));
-                });
-            }).catch(err => alert("Error uploading: " + err.message));
-        };
-        input.click();
+            db.collection('users').doc(user.email).update({
+                profilePic: url
+            }).then(() => {
+                document.getElementById('display-pic').src = url;
+                alert("Profile picture updated!");
+            }).catch(err => alert("Error updating photo: " + err.message));
+        }
     }
 
     function saveProfile() {
         const user = auth.currentUser;
-        if (!user) return alert("Please log in again");
+        if (!user) return alert("Session expired. Please login.");
 
         const btn = document.getElementById('save-btn');
         btn.innerText = "Saving...";
