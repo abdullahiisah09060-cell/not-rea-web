@@ -7,11 +7,10 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        /* Keeping your design exactly as provided */
         body { background:#002d72; color:white; font-family: sans-serif; margin:0; }
         .card { background:white; margin:20px; border-radius:25px; padding:30px; color:#333; }
-        input, textarea { width:100%; padding:15px; margin:10px 0; border:1px solid #ddd; border-radius:10px; box-sizing:border-box; }
-        .btn-sub { width:100%; padding:18px; background:#002d72; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer; }
+        input, textarea { width:100%; padding:15px; margin:10px 0; border:1px solid #ddd; border-radius:10px; box-sizing:border-box; font-size: 16px; }
+        .btn-sub { width:100%; padding:18px; background:#002d72; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -19,49 +18,36 @@
     
     <div class="card">
         <h2 style="color:#002d72;">Request Grant</h2>
+        <p style="font-size: 14px; color: #666;">Enter the amount you wish to apply for and your business reason.</p>
         <input type="number" id="g-amount" placeholder="Amount (USD)">
         <textarea id="g-purpose" rows="5" placeholder="State your business purpose..."></textarea>
         <button class="btn-sub" onclick="apply()">Submit Application</button>
     </div>
 
     <script src="script.js"></script>
-    
     <script>
-        // Ensure user is logged in
-        auth.onAuthStateChanged(user => {
-            if (!user) window.location.href = "index.html";
-        });
+        auth.onAuthStateChanged(user => { if (!user) window.location.href = "index.html"; });
 
         function apply() {
             const user = auth.currentUser;
             const amt = document.getElementById('g-amount').value;
             const purpose = document.getElementById('g-purpose').value;
 
-            if(!user) return alert("Session expired. Please login.");
             if(!amt || !purpose) return alert("Please fill all fields");
 
-            // DISABLE BUTTON to prevent double clicking
             const btn = document.querySelector('.btn-sub');
-            btn.disabled = true;
-            btn.innerText = "Processing...";
+            btn.disabled = true; btn.innerText = "Processing...";
 
             db.collection('requests').add({
-                userId: user.uid,
-                email: user.email, // Added for Admin to see easily
-                type: 'Grant Application',
+                email: user.email,
+                type: 'grant', // Matches Admin "Approve" logic
                 amount: parseFloat(amt),
                 purpose: purpose,
                 status: 'pending',
-                // FIX: Use Server Timestamp so dashboard can sort by date
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                dateText: new Date().toLocaleString()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
-                alert("Application submitted for review!");
+                alert("Application submitted! Check your dashboard for status.");
                 window.location.href = 'dashboard.html';
-            }).catch(err => {
-                alert("Error: " + err.message);
-                btn.disabled = false;
-                btn.innerText = "Submit Application";
             });
         }
     </script>
