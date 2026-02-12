@@ -6,88 +6,98 @@
     <title>SBA Support | Live Chat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #001a4d; margin: 0; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .header { background: #05163d; padding: 15px; display: flex; align-items: center; border-bottom: 2px solid #3498db; color: white; }
+        body { background: #001a4d; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Header */
+        .header { background: #05163d; padding: 15px; display: flex; align-items: center; border-bottom: 2px solid #3498db; color: white; z-index: 10; }
         .header a { color: white; text-decoration: none; margin-right: 15px; font-size: 20px; }
+        .header b { font-size: 16px; display: block; }
+        .header small { color: #2ecc71; font-size: 11px; }
+
+        /* Chat Body */
+        #chat-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; background: #001133; padding-bottom: 90px; }
         
-        #chat-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; background: #001133; }
-        
-        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; position: relative; word-wrap: break-word; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; word-wrap: break-word; animation: fadeIn 0.2s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         
         .user { align-self: flex-end; background: #3498db; color: white; border-bottom-right-radius: 2px; }
         .admin { align-self: flex-start; background: #1a3a8a; color: white; border: 1px solid #3498db; border-bottom-left-radius: 2px; }
-        
-        .input-area { background: #05163d; padding: 12px; display: flex; gap: 10px; border-top: 1px solid #1a3a8a; align-items: center; }
+
+        /* Fixed Input Bar */
+        .input-container { position: fixed; bottom: 0; left: 0; width: 100%; background: #05163d; padding: 12px; display: flex; gap: 10px; box-sizing: border-box; border-top: 1px solid #1a3a8a; align-items: center; }
         input { flex: 1; padding: 12px 18px; border-radius: 25px; border: 1px solid #3498db; background: #001a4d; color: white; outline: none; font-size: 16px; }
-        button { background: #2ecc71; border: none; width: 48px; height: 48px; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        button { background: #2ecc71; border: none; width: 45px; height: 45px; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: 0.2s; }
+        button:active { transform: scale(0.9); background: #27ae60; }
     </style>
 </head>
 <body>
     <div class="header">
         <a href="dashboard.html"><i class="fa fa-arrow-left"></i></a>
         <div>
-            <b style="display: block;">Support Agent</b>
-            <small style="color: #2ecc71;">● Online</small>
+            <b>SBA Support Agent</b>
+            <small>● Online | Response time: 2 mins</small>
         </div>
     </div>
 
     <div id="chat-box">
         </div>
 
-    <div class="input-area">
-        <input type="text" id="m-input" placeholder="Type a message..." autocomplete="off">
-        <button onclick="send()"><i class="fa fa-paper-plane"></i></button>
+    <div class="input-container">
+        <input type="text" id="user-msg" placeholder="Write a message..." autocomplete="off">
+        <button onclick="sendMsg()"><i class="fa fa-paper-plane"></i></button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="script.js"></script>
-    <script>
-        const box = document.getElementById('chat-box');
-        const inp = document.getElementById('m-input');
+    <script src="script.js"></script> <script>
+        const chatBox = document.getElementById('chat-box');
+        const msgInput = document.getElementById('user-msg');
 
+        // Listen for Auth State
         auth.onAuthStateChanged(user => {
             if (user) {
-                // Listen for messages in real-time
+                // Real-time listener for this user's chat
                 db.collection('chats')
                   .where('userEmail', '==', user.email)
                   .orderBy('timestamp', 'asc')
                   .onSnapshot(snap => {
-                    box.innerHTML = `<div class="msg admin">Hello! Welcome to SBA Support. How can we help you today?</div>`;
+                    // Start with welcome message
+                    chatBox.innerHTML = `<div class="msg admin">Hello! Welcome to SBA Support. How can we help you today? Please tell us clearly.</div>`;
+                    
                     snap.forEach(doc => {
-                        const d = doc.data();
-                        const type = d.sender === 'user' ? 'user' : 'admin';
-                        box.innerHTML += `<div class="msg ${type}">${d.message}</div>`;
+                        const m = doc.data();
+                        const senderClass = m.sender === 'user' ? 'user' : 'admin';
+                        chatBox.innerHTML += `<div class="msg ${senderClass}">${m.message}</div>`;
                     });
-                    // Auto scroll to bottom
-                    box.scrollTop = box.scrollHeight;
-                }, err => {
-                    console.error("Chat Error:", err);
+                    
+                    // Instant Scroll to Bottom
+                    chatBox.scrollTop = chatBox.scrollHeight;
                 });
             } else {
-                window.location.href="index.html";
+                window.location.href = "index.html";
             }
         });
 
-        async function send() {
-            const text = inp.value.trim();
-            if(!text) return;
-            const user = auth.currentUser;
+        // Send Message Function
+        async function sendMsg() {
+            const text = msgInput.value.trim();
+            if (!text) return;
             
-            // Push to Firebase
-            await db.collection('chats').add({
+            const user = auth.currentUser;
+            const msgData = {
                 userEmail: user.email,
                 message: text,
                 sender: 'user',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            inp.value = ""; // Clear input immediately
+            };
+
+            msgInput.value = ""; // Clear immediately for speed
+            await db.collection('chats').add(msgData);
         }
 
-        // Allow "Enter" key to send
-        inp.addEventListener("keypress", (e) => { if(e.key === "Enter") send(); });
+        // Send on "Enter" key
+        msgInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMsg(); });
     </script>
 </body>
 </html>
