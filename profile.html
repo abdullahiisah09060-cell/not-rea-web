@@ -13,9 +13,12 @@
         .avatar-box img { width: 100%; height: 100%; border-radius: 50%; border: 5px solid white; background: #eee; object-fit: cover; }
         .cam-btn { position: absolute; bottom: 5px; right: 5px; background: #333; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; cursor: pointer; }
         .input-group { text-align: left; margin-bottom: 20px; }
-        .input-group label { display: block; font-weight: bold; color: #002366; margin-bottom: 5px; margin-left: 5px; }
-        .input-group input, .input-group textarea { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd; background: #f9f9f9; box-sizing: border-box; font-size: 16px; }
-        .save-btn { width: 100%; padding: 18px; border-radius: 15px; border: none; background: #002366; color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
+        .input-group label { display: block; font-weight: bold; color: #002366; margin-bottom: 5px; margin-left: 5px; font-size: 14px; }
+        .input-group input, .input-group textarea { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd; background: #f9f9f9; box-sizing: border-box; font-size: 16px; outline: none; }
+        /* Style for the read-only email */
+        .email-field { background: #ececec !important; color: #777; cursor: not-allowed; }
+        .save-btn { width: 100%; padding: 18px; border-radius: 15px; border: none; background: #002366; color: white; font-weight: bold; font-size: 18px; cursor: pointer; transition: 0.3s; }
+        .save-btn:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
@@ -26,6 +29,11 @@
     <div class="avatar-box">
         <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" id="display-pic">
         <div class="cam-btn" onclick="chooseImage()"><i class="fas fa-camera"></i></div>
+    </div>
+
+    <div class="input-group">
+        <label>Account Email</label>
+        <input type="text" id="user-email" class="email-field" readonly>
     </div>
 
     <div class="input-group">
@@ -43,7 +51,7 @@
         <textarea id="address" rows="3" placeholder="Enter home address"></textarea>
     </div>
 
-    <button class="save-btn" onclick="saveProfile()">Save Changes</button>
+    <button class="save-btn" id="save-btn" onclick="saveProfile()">Save Changes</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -55,10 +63,13 @@
 <script>
     auth.onAuthStateChanged(user => {
         if (user) {
-            db.collection('users').doc(user.uid).onSnapshot(doc => {
+            document.getElementById('user-email').value = user.email;
+            
+            // Query by Email to stay consistent with Admin/Dashboard logic
+            db.collection('users').doc(user.email).onSnapshot(doc => {
                 if (doc.exists) {
                     const u = doc.data();
-                    document.getElementById('full-name').value = u.fullName || u.fullname || "";
+                    document.getElementById('full-name').value = u.fullName || "";
                     document.getElementById('phone').value = u.phoneNumber || "";
                     document.getElementById('address').value = u.homeAddress || "";
                     if(u.profilePic) document.getElementById('display-pic').src = u.profilePic;
@@ -75,13 +86,19 @@
         input.accept = 'image/*';
         input.onchange = e => {
             const file = e.target.files[0];
-            const ref = firebase.storage().ref('profiles/' + auth.currentUser.uid);
+            const user = auth.currentUser;
+            if(!user) return;
+
+            const ref = firebase.storage().ref('profiles/' + user.email);
+            
+            alert("Uploading image... Please wait.");
+            
             ref.put(file).then(() => {
                 ref.getDownloadURL().then(url => {
-                    db.collection('users').doc(auth.currentUser.uid).set({ profilePic: url }, { merge: true });
-                    alert("Photo Uploaded!");
+                    db.collection('users').doc(user.email).update({ profilePic: url })
+                    .then(() => alert("Photo Updated Successfully!"));
                 });
-            });
+            }).catch(err => alert("Error uploading: " + err.message));
         };
         input.click();
     }
@@ -90,15 +107,22 @@
         const user = auth.currentUser;
         if (!user) return alert("Please log in again");
 
-        db.collection('users').doc(user.uid).set({
+        const btn = document.getElementById('save-btn');
+        btn.innerText = "Saving...";
+        btn.disabled = true;
+
+        db.collection('users').doc(user.email).set({
             fullName: document.getElementById('full-name').value, 
             phoneNumber: document.getElementById('phone').value,
-            homeAddress: document.getElementById('address').value,
-            email: user.email
+            homeAddress: document.getElementById('address').value
         }, { merge: true }).then(() => {
             alert("Profile Updated Successfully!");
+            btn.innerText = "Save Changes";
+            btn.disabled = false;
         }).catch((error) => {
             alert("Error: " + error.message);
+            btn.innerText = "Save Changes";
+            btn.disabled = false;
         });
     }
 </script>
