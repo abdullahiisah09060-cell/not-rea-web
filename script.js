@@ -11,11 +11,11 @@ if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// --- AUTH ---
+// --- AUTH LOGIC ---
 function login() {
     const e = document.getElementById('l-email').value.trim().toLowerCase();
     const p = document.getElementById('l-pass').value;
-    if(!e || !p) return alert("Enter details");
+    if(!e || !p) return alert("Details required");
 
     auth.signInWithEmailAndPassword(e, p).then(u => {
         window.location.href = (u.user.email === "abdullahiisah09060@gmail.com") ? 'admin_dashboard.html' : 'dashboard.html';
@@ -37,7 +37,7 @@ function signup() {
 
 function logout() { auth.signOut().then(() => window.location.href = 'index.html'); }
 
-// --- LIVE CHAT ENGINE (The Fix) ---
+// --- LIVE CHAT ENGINE ---
 function listenToChat(email, containerId, isUserSide) {
     const box = document.getElementById(containerId);
     if (!box) return;
@@ -46,18 +46,21 @@ function listenToChat(email, containerId, isUserSide) {
       .where('userEmail', '==', email)
       .orderBy('timestamp', 'asc')
       .onSnapshot(snap => {
-          box.innerHTML = isUserSide ? '<div class="bubble a-msg">Hello! Welcome to SBA Support. How can we help you?</div>' : '';
+          // Fixed: The welcome message is now permanent
+          let html = isUserSide ? '<div class="bubble a-msg">Hello! Welcome to SBA Support. How can we help you?</div>' : '';
+          
           snap.forEach(doc => {
               const d = doc.data();
               const side = d.sender === 'user' ? (isUserSide ? 'u-msg' : 'b-usr') : (isUserSide ? 'a-msg' : 'b-adm');
               
               if (isUserSide) {
-                  box.innerHTML += `<div class="bubble ${side}">${d.message}</div>`;
+                  html += `<div class="bubble ${side}">${d.message}</div>`;
               } else {
                   const style = d.sender === 'admin' ? 'background:#3498db; align-self:flex-end;' : 'background:#2c2f36;';
-                  box.innerHTML += `<div style="padding:10px; border-radius:10px; max-width:80%; margin:5px; color:white; ${style}">${d.message}</div>`;
+                  html += `<div style="padding:10px; border-radius:10px; max-width:80%; margin:5px; color:white; ${style}">${d.message}</div>`;
               }
           });
+          box.innerHTML = html;
           box.scrollTop = box.scrollHeight;
       });
 }
