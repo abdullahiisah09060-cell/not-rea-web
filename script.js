@@ -1,67 +1,141 @@
-const firebaseConfig = {
-  apiKey: "AIzaSyDv4-CogG4VR7_NMH3AEEvt2ArWWw6f2m0",
-  authDomain: "sba-grant-us.firebaseapp.com",
-  projectId: "sba-grant-us",
-  storageBucket: "sba-grant-us.firebasestorage.app",
-  messagingSenderId: "458051323380",
-  appId: "1:458051323380:web:1f6ef0823034a3fed7a5a1"
-};
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBA Admin</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="script.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background: #0b0e11; color: white; font-family: sans-serif; margin: 0; display: none; }
+        .tabs { display: flex; background: #161a1e; border-bottom: 2px solid #3498db; position: sticky; top: 0; z-index: 100; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 11px; font-weight: bold; color: #888; }
+        .tab.active { color: #3498db; background: rgba(52, 152, 219, 0.1); }
+        .page { display: none; padding: 15px; }
+        .page.active { display: block; }
+        .card { background: #161a1e; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #2c2f36; }
+        .btn { padding: 8px 12px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        input { width: 100%; padding: 10px; margin: 5px 0; background: #0b0e11; border: 1px solid #3498db; color: white; border-radius: 8px; box-sizing: border-box; }
+        #chat-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        #chat-box-admin { width: 95%; max-width: 400px; height: 80vh; background: #161a1e; border-radius: 12px; display: flex; flex-direction: column; }
+    </style>
+</head>
+<body>
 
-if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-const auth = firebase.auth();
-const db = firebase.firestore();
+<div class="tabs">
+    <div class="tab active" onclick="show('p1')">Requests</div>
+    <div class="tab" onclick="show('p2')">Users</div>
+    <div class="tab" onclick="show('p3')">Inbox</div>
+    <div class="tab" onclick="logout()" style="color:red;">EXIT</div>
+</div>
 
-// --- LOGIN FUNCTION (The part that was missing) ---
-function login() {
-    const e = document.getElementById('l-email').value.trim().toLowerCase();
-    const p = document.getElementById('l-pass').value;
+<div id="p1" class="page active"><div id="req-list"></div></div>
+<div id="p2" class="page"><div id="usr-list"></div></div>
+<div id="p3" class="page"><div id="msg-list"></div></div>
 
-    if(!e || !p) return alert("Please enter email and password");
+<div id="chat-overlay">
+    <div id="chat-box-admin">
+        <div style="padding:15px; border-bottom:1px solid #3498db; display:flex; justify-content:space-between;">
+            <span id="chat-target">User</span> <b onclick="closeChat()" style="cursor:pointer;">X</b>
+        </div>
+        <div id="admin-chat-content" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column;"></div>
+        <div style="padding:10px; display:flex; gap:5px;">
+            <input type="text" id="admin-msg" placeholder="Reply...">
+            <button class="btn" style="background:#2ecc71;" onclick="sendAdminReply()">SEND</button>
+        </div>
+    </div>
+</div>
 
-    auth.signInWithEmailAndPassword(e, p).then((userCredential) => {
-        const user = userCredential.user;
-        // Check if it's the Admin email from your Firebase list
-        if (user.email === "abdullahiisah09060@gmail.com") {
-            window.location.href = 'admin_dashboard.html';
-        } else {
-            window.location.href = 'dashboard.html';
-        }
-    }).catch(err => {
-        alert("Login Error: " + err.message);
+<script>
+    let activeUser = "";
+    function show(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    auth.onAuthStateChanged(u => {
+        if(u && u.email === "abdullahiisah09060@gmail.com") { document.body.style.display="block"; loadData(); }
+        else { window.location.href="index.html"; }
     });
-}
 
-// --- SIGNUP FUNCTION ---
-function signup() {
-    const n = document.getElementById('s-name').value.trim();
-    const e = document.getElementById('s-email').value.trim().toLowerCase();
-    const p = document.getElementById('s-pass').value;
-    
-    // Check if the checkbox is checked
-    const terms = document.getElementById('terms-check');
-    if(terms && !terms.checked) return alert("You must agree to the Terms & Conditions");
-
-    if(!n || !e || !p) return alert("Please fill all fields");
-
-    const btn = document.getElementById('reg-btn');
-    btn.disabled = true;
-
-    auth.createUserWithEmailAndPassword(e, p).then(cred => {
-        return db.collection('users').doc(cred.user.uid).set({
-            fullName: n,
-            email: e,
-            balance: 0,
-            status: 'Active'
+    function loadData() {
+        // Live Requests
+        db.collection('requests').where('status', '==', 'pending').onSnapshot(snap => {
+            let h = ''; snap.forEach(doc => {
+                const r = doc.data();
+                h += `<div class="card"><b>${r.email}</b><br>$${r.amount} (${r.type})<br>
+                <button class="btn" style="background:#2ecc71;" onclick="actReq('${doc.id}','${r.email}',${r.amount},'successful')">Approve</button>
+                <button class="btn" style="background:#e74c3c;" onclick="actReq('${doc.id}','',0,'declined')">Decline</button></div>`;
+            });
+            document.getElementById('req-list').innerHTML = h || "No requests";
         });
-    }).then(() => {
-        window.location.href = 'dashboard.html';
-    }).catch(err => {
-        alert(err.message);
-        btn.disabled = false;
-    });
-}
 
-// --- LOGOUT FUNCTION ---
-function logout() {
-    if(confirm("Logout?")) { auth.signOut().then(() => window.location.href = 'index.html'); }
-}
+        // Live Users
+        db.collection('users').onSnapshot(snap => {
+            let h = ''; snap.forEach(doc => {
+                const u = doc.data();
+                h += `<div class="card"><b>${u.fullName}</b> (${u.email})<br>Bal: $${u.balance}
+                <input type="number" id="v-${doc.id}" placeholder="Amount">
+                <button class="btn" style="background:#3498db;" onclick="adjBal('${doc.id}','add')">ADD</button>
+                <button class="btn" style="background:#888;" onclick="adjBal('${doc.id}','sub')">SUB</button>
+                <button class="btn" style="background:red; width:100%;" onclick="delUsr('${doc.id}')">DELETE USER</button></div>`;
+            });
+            document.getElementById('usr-list').innerHTML = h;
+        });
+
+        // Live Inbox
+        db.collection('chats').orderBy('timestamp', 'desc').onSnapshot(snap => {
+            let users = []; snap.forEach(doc => { if(!users.includes(doc.data().userEmail)) users.push(doc.data().userEmail); });
+            let h = ''; users.forEach(e => { h += `<div class="card" onclick="openAdminChat('${e}')">${e} →</div>`; });
+            document.getElementById('msg-list').innerHTML = h || "No messages";
+        });
+    }
+
+    async function actReq(id, email, amt, status) {
+        if(status === 'successful') {
+            const uS = await db.collection('users').where('email', '==', email).get();
+            if(!uS.empty) {
+                const uRef = uS.docs[0].ref;
+                const b = Number(uS.docs[0].data().balance || 0);
+                await uRef.update({ balance: b + Number(amt) });
+            }
+        }
+        await db.collection('requests').doc(id).update({ status: status });
+    }
+
+    async function adjBal(id, type) {
+        const val = Number(document.getElementById('v-'+id).value);
+        const ref = db.collection('users').doc(id);
+        const doc = await ref.get();
+        const b = Number(doc.data().balance || 0);
+        await ref.update({ balance: type === 'add' ? b + val : b - val });
+        document.getElementById('v-'+id).value = '';
+    }
+
+    async function delUsr(id) { if(confirm("Delete?")) await db.collection('users').doc(id).delete(); }
+
+    function openAdminChat(email) {
+        activeUser = email;
+        document.getElementById('chat-target').innerText = email;
+        document.getElementById('chat-overlay').style.display = 'flex';
+        listenToChat(email, 'admin-chat-content', false);
+    }
+    
+    function closeChat() { document.getElementById('chat-overlay').style.display = 'none'; }
+
+    async function sendAdminReply() {
+        const msg = document.getElementById('admin-msg').value;
+        if(!msg) return;
+        await db.collection('chats').add({
+            userEmail: activeUser, message: msg, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('admin-msg').value = "";
+    }
+</script>
+</body>
+</html>
