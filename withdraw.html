@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Withdraw Funds | SBA</title>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
         body { background: #002d72; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; color: white; height: 100vh; }
         .header { padding: 20px; display: flex; align-items: center; background: #001a41; }
@@ -18,6 +18,7 @@
         .input-label { font-weight: bold; color: #002d72; font-size: 15px; margin-bottom: 10px; display: block; }
         input, textarea { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 15px; box-sizing: border-box; font-size: 16px; background: #f9f9f9; outline: none; color: #333; }
         .btn-withdraw { width: 100%; padding: 18px; background: #3498db; color: white; border: none; border-radius: 15px; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3); }
+        .btn-withdraw:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -29,7 +30,7 @@
     <div class="container">
         <div class="card">
             <div class="balance-box">
-                Available Balance: <b id="display-bal">$0.00</b>
+                Available Balance: <b id="display-bal">Loading...</b>
             </div>
 
             <div class="input-group">
@@ -48,17 +49,15 @@
 
     <script src="script.js"></script>
     <script>
-        // --- SYNCED BALANCE FETCHING ---
+        let currentBalance = 0;
+
         auth.onAuthStateChanged(user => {
             if (user) {
-                // We look for the user by Email to match the Admin and Dashboard updates
-                db.collection('users').where('email', '==', user.email).onSnapshot(snap => {
-                    if(!snap.empty) {
-                        const userData = snap.docs[0].data();
-                        const bal = userData.balance || 0;
-                        document.getElementById('display-bal').innerText = "$" + Number(bal).toLocaleString();
-                    } else {
-                        document.getElementById('display-bal').innerText = "$0.00";
+                // Sync Balance
+                db.collection('users').doc(user.email).onSnapshot(doc => {
+                    if(doc.exists) {
+                        currentBalance = doc.data().balance || 0;
+                        document.getElementById('display-bal').innerText = "$" + Number(currentBalance).toLocaleString();
                     }
                 });
             } else {
@@ -76,48 +75,20 @@
             const amount = parseFloat(amtValue);
             const user = auth.currentUser;
 
-            if(!user) return alert("Session expired.");
+            if(amount > currentBalance) return alert("Insufficient Funds!");
+            if(amount <= 0) return alert("Invalid amount");
 
             btn.disabled = true;
             btn.innerText = "Processing...";
 
             try {
-                // Fetch the profile by email to verify funds
-                const userQuery = await db.collection('users').where('email', '==', user.email).get();
-                
-                if(userQuery.empty) {
-                    btn.disabled = false;
-                    btn.innerText = "Request Withdrawal";
-                    return alert("User profile not found. Please refresh.");
-                }
-
-                const uDoc = userQuery.docs[0];
-                const currentBal = uDoc.data().balance || 0;
-                const userName = uDoc.data().fullName || "User";
-
-                if(amount > currentBal) {
-                    btn.disabled = false;
-                    btn.innerText = "Request Withdrawal";
-                    return alert("Insufficient Funds! Your balance is $" + currentBal.toLocaleString());
-                }
-                
-                if(amount <= 0) {
-                    btn.disabled = false;
-                    btn.innerText = "Request Withdrawal";
-                    return alert("Please enter a valid amount");
-                }
-
-                // Save Request to Firebase
                 await db.collection('requests').add({
-                    userId: user.uid,
-                    userName: userName,
-                    email: user.email, // THIS ENSURES THE ADMIN CAN FIND THE USER
-                    type: 'Withdrawal', 
+                    email: user.email,
+                    type: 'withdrawal', 
                     amount: amount,
                     details: details,
                     status: 'pending',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    createdAt: new Date()
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
                 alert("Withdrawal request sent successfully!");
