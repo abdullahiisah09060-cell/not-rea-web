@@ -7,103 +7,23 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    
     <style>
-        body { 
-            background: #002d72; 
-            font-family: 'Segoe UI', sans-serif; 
-            margin: 0; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-        }
-        .card { 
-            width: 90%; 
-            max-width: 400px; 
-            background: white; 
-            border-radius: 30px; 
-            padding: 40px 25px; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
-            text-align: center; 
-        }
-        .app-title { 
-            color: #002d72; 
-            font-weight: bold; 
-            font-size: 22px; 
-            margin-bottom: 30px; 
-            text-transform: uppercase; 
-        }
-        .toggle-box { 
-            display: flex; 
-            background: #f4f7f6; 
-            border-radius: 12px; 
-            padding: 5px; 
-            margin-bottom: 35px; 
-        }
-        .tgl-btn { 
-            flex: 1; 
-            padding: 12px; 
-            cursor: pointer; 
-            border-radius: 10px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            border: none; 
-            outline: none; 
-            transition: 0.3s; 
-        }
+        body { background: #002d72; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .card { width: 90%; max-width: 400px; background: white; border-radius: 30px; padding: 40px 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-align: center; }
+        .app-title { color: #002d72; font-weight: bold; font-size: 22px; margin-bottom: 30px; text-transform: uppercase; }
+        .toggle-box { display: flex; background: #f4f7f6; border-radius: 12px; padding: 5px; margin-bottom: 35px; }
+        .tgl-btn { flex: 1; padding: 12px; cursor: pointer; border-radius: 10px; font-size: 14px; font-weight: bold; border: none; outline: none; transition: 0.3s; }
         .active { background: #002d72; color: white; }
         .inactive { background: transparent; color: #888; }
-        
-        input[type="text"], input[type="email"], input[type="password"] { 
-            width: 100%; 
-            padding: 15px; 
-            border: 1px solid #ddd; 
-            border-radius: 12px; 
-            box-sizing: border-box; 
-            margin-bottom: 15px; 
-            font-size: 16px; 
-            outline: none;
-        }
-        .btn-main { 
-            width: 100%; 
-            padding: 18px; 
-            background: #002d72; 
-            color: white; 
-            border: none; 
-            border-radius: 12px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            font-size: 16px;
-        }
-
-        .footer-links { 
-            font-size: 14px; 
-            margin: 20px 0; 
-            color: #666; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 10px; 
-        }
-        .footer-links input[type="checkbox"] { 
-            width: 18px; 
-            height: 18px; 
-            margin: 0;
-            cursor: pointer; 
-        }
-        .footer-links a { 
-            color: #002d72; 
-            text-decoration: none; 
-            font-weight: bold; 
-        }
+        input { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box; margin-bottom: 15px; font-size: 16px; outline: none; }
+        .btn-main { width: 100%; padding: 18px; background: #002d72; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .footer-links { font-size: 14px; margin: 20px 0; color: #666; display: flex; align-items: center; justify-content: center; gap: 10px; }
     </style>
 </head>
 <body>
 
     <div class="card">
         <div class="app-title">SBA GRANT PORTAL</div>
-        
         <div class="toggle-box">
             <button id="btn-login" class="tgl-btn active" onclick="showTab('login')">Log In</button>
             <button id="btn-signup" class="tgl-btn inactive" onclick="showTab('signup')">Sign Up</button>
@@ -119,19 +39,16 @@
             <input type="text" id="s-name" placeholder="Full Name">
             <input type="email" id="s-email" placeholder="Email Address">
             <input type="password" id="s-pass" placeholder="Password">
-            
             <div class="footer-links">
                 <input type="checkbox" id="terms-check">
-                <label for="terms-check">Agree to our <a href="terms.html">Terms & Conditions</a></label>
+                <label for="terms-check">Agree to <a href="#">Terms</a></label>
             </div>
-            
-            <button class="btn-main" id="reg-btn" onclick="signup()">Sign Up</button>
+            <button class="btn-main" onclick="signup()">Sign Up</button>
         </div>
     </div>
 
     <script src="script.js"></script>
     <script>
-        // --- REDIRECT LOGIC ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 if (user.email === "abdullahiisah09060@gmail.com") {
@@ -143,56 +60,38 @@
         });
 
         function showTab(type) {
-            const loginSec = document.getElementById('login-section');
-            const signupSec = document.getElementById('signup-section');
-            const loginBtn = document.getElementById('btn-login');
-            const signupBtn = document.getElementById('btn-signup');
-            if (type === 'login') {
-                loginSec.style.display = 'block'; signupSec.style.display = 'none';
-                loginBtn.className = 'tgl-btn active'; signupBtn.className = 'tgl-btn inactive';
-            } else {
-                loginSec.style.display = 'none'; signupSec.style.display = 'block';
-                loginBtn.className = 'tgl-btn inactive'; signupBtn.className = 'tgl-btn active';
-            }
+            document.getElementById('login-section').style.display = type === 'login' ? 'block' : 'none';
+            document.getElementById('signup-section').style.display = type === 'login' ? 'none' : 'block';
+            document.getElementById('btn-login').className = type === 'login' ? 'tgl-btn active' : 'tgl-btn inactive';
+            document.getElementById('btn-signup').className = type === 'signup' ? 'tgl-btn active' : 'tgl-btn inactive';
         }
 
-        // --- AUTH LOGIC (Synced with Dashboard/Admin) ---
         async function signup() {
             const name = document.getElementById('s-name').value;
             const email = document.getElementById('s-email').value;
             const pass = document.getElementById('s-pass').value;
-            const agree = document.getElementById('terms-check').checked;
-
-            if (!name || !email || !pass) return alert("Please fill all fields");
-            if (!agree) return alert("Please agree to the terms");
+            if (!name || !email || !pass || !document.getElementById('terms-check').checked) return alert("Fill all fields and agree to terms");
 
             try {
                 const cred = await auth.createUserWithEmailAndPassword(email, pass);
-                // We use the EMAIL as the document ID to ensure Admin and Dashboard always find the same file
+                // CRITICAL FIX: Use email as Doc ID
                 await db.collection('users').doc(email).set({
                     fullName: name,
                     email: email,
                     uid: cred.user.uid,
                     balance: 0,
-                    status: "Active",
+                    profilePic: "",
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert("Registration Successful!");
-            } catch (err) {
-                alert(err.message);
-            }
+                alert("Account Created!");
+            } catch (err) { alert(err.message); }
         }
 
         async function login() {
             const email = document.getElementById('l-email').value;
             const pass = document.getElementById('l-pass').value;
-            if (!email || !pass) return alert("Fill all fields");
-            
-            try {
-                await auth.signInWithEmailAndPassword(email, pass);
-            } catch (err) {
-                alert(err.message);
-            }
+            try { await auth.signInWithEmailAndPassword(email, pass); } 
+            catch (err) { alert(err.message); }
         }
     </script>
 </body>
