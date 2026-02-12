@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBA | Profile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #001a4d; margin: 0; padding: 20px; font-family: sans-serif; color: #333; }
+        .back-nav { position: absolute; top: 20px; left: 20px; color: white; font-size: 24px; cursor: pointer; text-decoration: none; }
+        .profile-card { background: white; border-radius: 30px; padding: 30px; margin-top: 60px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); position: relative; }
+        .avatar-box { position: relative; width: 120px; height: 120px; margin: -80px auto 20px auto; }
+        .avatar-box img { width: 100%; height: 100%; border-radius: 50%; border: 5px solid white; background: #eee; object-fit: cover; }
+        .cam-btn { position: absolute; bottom: 5px; right: 5px; background: #333; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; cursor: pointer; }
+        .input-group { text-align: left; margin-bottom: 20px; }
+        .input-group label { display: block; font-weight: bold; color: #002366; margin-bottom: 5px; margin-left: 5px; }
+        .input-group input, .input-group textarea { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd; background: #f9f9f9; box-sizing: border-box; font-size: 16px; }
+        .save-btn { width: 100%; padding: 18px; border-radius: 15px; border: none; background: #002366; color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<a href="dashboard.html" class="back-nav"><i class="fas fa-arrow-left"></i></a>
+
+<div class="profile-card">
+    <div class="avatar-box">
+        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" id="display-pic">
+        <div class="cam-btn" onclick="chooseImage()"><i class="fas fa-camera"></i></div>
+    </div>
+
+    <div class="input-group">
+        <label>Full Name</label>
+        <input type="text" id="full-name" placeholder="Enter Full Name">
+    </div>
+
+    <div class="input-group">
+        <label>Phone Number</label>
+        <input type="text" id="phone" placeholder="Enter phone number">
+    </div>
+
+    <div class="input-group">
+        <label>Home Address</label>
+        <textarea id="address" rows="3" placeholder="Enter home address"></textarea>
+    </div>
+
+    <button class="save-btn" onclick="saveProfile()">Save Changes</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+<script src="script.js"></script>
+
+<script>
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            db.collection('users').doc(user.uid).onSnapshot(doc => {
+                if (doc.exists) {
+                    const u = doc.data();
+                    document.getElementById('full-name').value = u.fullName || u.fullname || "";
+                    document.getElementById('phone').value = u.phoneNumber || "";
+                    document.getElementById('address').value = u.homeAddress || "";
+                    if(u.profilePic) document.getElementById('display-pic').src = u.profilePic;
+                }
+            });
+        } else {
+            window.location.href = "index.html";
+        }
+    });
+
+    function chooseImage() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            const ref = firebase.storage().ref('profiles/' + auth.currentUser.uid);
+            ref.put(file).then(() => {
+                ref.getDownloadURL().then(url => {
+                    db.collection('users').doc(auth.currentUser.uid).set({ profilePic: url }, { merge: true });
+                    alert("Photo Uploaded!");
+                });
+            });
+        };
+        input.click();
+    }
+
+    function saveProfile() {
+        const user = auth.currentUser;
+        if (!user) return alert("Please log in again");
+
+        db.collection('users').doc(user.uid).set({
+            fullName: document.getElementById('full-name').value, 
+            phoneNumber: document.getElementById('phone').value,
+            homeAddress: document.getElementById('address').value,
+            email: user.email
+        }, { merge: true }).then(() => {
+            alert("Profile Updated Successfully!");
+        }).catch((error) => {
+            alert("Error: " + error.message);
+        });
+    }
+</script>
+</body>
+</html>

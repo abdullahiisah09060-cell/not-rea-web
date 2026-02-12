@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBA | MASTER ADMIN</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="script.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #0b0e11; color: white; font-family: sans-serif; padding: 0; margin: 0; display: none; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #161a1e; padding: 15px; border-bottom: 2px solid #3498db; }
+        
+        /* Tabs Styling */
+        .tab-bar { display: flex; background: #161a1e; border-bottom: 1px solid #2c2f36; position: sticky; top: 0; z-index: 100; }
+        .tab { flex: 1; padding: 15px; text-align: center; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #888; cursor: pointer; position: relative; }
+        .tab.active { color: #3498db; border-bottom: 3px solid #3498db; background: rgba(52, 152, 219, 0.1); }
+        
+        /* Red Notification Dot */
+        .badge { position: absolute; top: 10px; right: 15%; width: 8px; height: 8px; background: #ff4757; border-radius: 50%; display: none; box-shadow: 0 0 5px #ff4757; }
+
+        .content-area { padding: 15px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .stat-container { display: flex; gap: 10px; margin-bottom: 20px; }
+        .stat-box { background: rgba(52, 152, 219, 0.1); padding: 15px; border-radius: 12px; border: 1px solid #3498db; text-align: center; flex: 1; }
+        .stat-box b { font-size: 18px; display: block; margin-top: 5px; }
+
+        .search-box { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #2c2f36; background: #1c1f24; color: white; outline: none; box-sizing: border-box; }
+        
+        .card { background: #161a1e; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #2c2f36; }
+        .row-content { display: flex; justify-content: space-between; align-items: flex-start; }
+        .info b { font-size: 14px; display: block; }
+        .info small { color: #888; font-size: 11px; }
+        .bal { color: #2ecc71; font-weight: bold; font-size: 14px; margin-top: 4px; display: block; }
+
+        .btn { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        .btn-approve { background: #2ecc71; color: white; width: 100%; margin-bottom: 5px; }
+        .btn-decline { background: #e74c3c; color: white; width: 100%; }
+        .btn-del { background: #444; color: #ff4757; margin-top: 10px; width: 100%; border: 1px solid #ff4757; }
+        
+        /* Chat Styling */
+        .chat-bubble { background: #1c1f24; padding: 12px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #3498db; }
+        .chat-input-row { display: flex; gap: 8px; margin-top: 10px; }
+        .chat-input { flex: 1; padding: 8px; border-radius: 5px; border: 1px solid #3498db; background: #0b0e11; color: white; outline: none; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1 style="font-size: 16px; margin: 0;">SBA MASTER</h1>
+    <button onclick="logout()" class="btn" style="background:#e74c3c; color:white;">Logout</button>
+</div>
+
+<div class="tab-bar">
+    <div class="tab active" onclick="openTab(event, 'pending-tab')">
+        Requests <span id="dot-req" class="badge"></span>
+    </div>
+    <div class="tab" onclick="openTab(event, 'users-tab')">Users</div>
+    <div class="tab" onclick="openTab(event, 'chat-tab')">
+        Messages <span id="dot-msg" class="badge"></span>
+    </div>
+</div>
+
+<div class="content-area">
+    
+    <div id="pending-tab" class="tab-content active">
+        <h3 style="font-size: 13px; color: #888;">PENDING APPROVALS</h3>
+        <div id="request-list">Loading...</div>
+    </div>
+
+    <div id="users-tab" class="tab-content">
+        <div class="stat-container">
+            <div class="stat-box"><small>Users</small><b id="stat-users">0</b></div>
+            <div class="stat-box"><small>Vault</small><b id="stat-balance">$0</b></div>
+        </div>
+        <input type="text" id="userSearch" class="search-box" placeholder="Search name or email..." onkeyup="filterUsers()">
+        <div id="user-list"></div>
+    </div>
+
+    <div id="chat-tab" class="tab-content">
+        <h3 style="font-size: 13px; color: #888;">UNREPLIED CHATS</h3>
+        <div id="admin-chat-area">No new messages</div>
+    </div>
+
+</div>
+
+<script>
+    function openTab(evt, tabName) {
+        let contents = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < contents.length; i++) contents[i].classList.remove("active");
+        let tabs = document.getElementsByClassName("tab");
+        for (let i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    auth.onAuthStateChanged(u => { 
+        if(u && u.email === "abdullahiisah09060@gmail.com") { 
+            document.body.style.display="block"; 
+            loadData(); 
+        } else { window.location.href="index.html"; }
+    });
+
+    function loadData() {
+        // Load & Notify Requests
+        db.collection('requests').where('status', '==', 'pending').onSnapshot(snap => {
+            document.getElementById('dot-req').style.display = snap.empty ? "none" : "block";
+            let h = ''; snap.forEach(doc => { 
+                const r = doc.data();
+                h += `<div class="card"><div class="row-content">
+                    <div class="info"><b>${r.email}</b><small>${r.type || 'GRANT'}</small><span class="bal">$${Number(r.amount).toLocaleString()}</span></div>
+                    <div style="width:100px;">
+                        <button class="btn btn-approve" onclick="approve('${doc.id}', '${r.userId}', ${r.amount})">APPROVE</button>
+                        <button class="btn btn-decline" onclick="decline('${doc.id}')">DECLINE</button>
+                    </div>
+                </div></div>`;
+            });
+            document.getElementById('request-list').innerHTML = h || '<p style="color:#555; text-align:center;">Clean slate! No pending requests.</p>';
+        });
+
+        // Load Users
+        db.collection('users').onSnapshot(snap => {
+            let h = ''; let total = 0; snap.forEach(doc => { 
+                const u = doc.data(); total += Number(u.balance || 0);
+                h += `<div class="card user-row">
+                    <div class="info"><b>${u.fullName || 'User'}</b><small>${u.email}</small><span class="bal">$${Number(u.balance || 0).toLocaleString()}</span></div>
+                    <div class="chat-input-row">
+                        <input type="number" id="amt-${doc.id}" class="chat-input" placeholder="Amount">
+                        <button class="btn" style="background:#3498db; color:white;" onclick="edit('${doc.id}', 'add')">ADD</button>
+                    </div>
+                    <button class="btn btn-del" onclick="deleteUser('${doc.id}')"><i class="fa fa-trash"></i> DELETE USER</button>
+                </div>`;
+            });
+            document.getElementById('user-list').innerHTML = h;
+            document.getElementById('stat-users').innerText = snap.size;
+            document.getElementById('stat-balance').innerText = '$' + total.toLocaleString();
+        });
+
+        // Load & Notify Chats
+        db.collection('chats').orderBy('timestamp', 'desc').onSnapshot(snap => {
+            let chatMap = {};
+            let hasUnreplied = false;
+            snap.forEach(doc => {
+                const m = doc.data();
+                if(!chatMap[m.userEmail] && m.sender === 'user') {
+                    chatMap[m.userEmail] = { msg: m.message, id: doc.id };
+                    hasUnreplied = true;
+                }
+            });
+            document.getElementById('dot-msg').style.display = hasUnreplied ? "block" : "none";
+            let h = '';
+            for(let email in chatMap) {
+                h += `<div class="chat-bubble">
+                    <small style="color:#3498db;">${email}</small>
+                    <p style="margin:5px 0; font-size:14px;">${chatMap[email].msg}</p>
+                    <div class="chat-input-row">
+                        <input type="text" id="reply-${chatMap[email].id}" class="chat-input" placeholder="Type reply...">
+                        <button class="btn" style="background:#2ecc71; color:white;" onclick="reply('${email}', '${chatMap[email].id}')">SEND</button>
+                    </div>
+                </div>`;
+            }
+            document.getElementById('admin-chat-area').innerHTML = h || '<p style="color:#555; text-align:center;">All messages replied.</p>';
+        });
+    }
+
+    async function reply(email, id) {
+        const txt = document.getElementById('reply-'+id).value;
+        if(!txt) return;
+        await db.collection('chats').add({
+            userEmail: email, message: txt, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('reply-'+id).value = '';
+    }
+
+    async function deleteUser(id) {
+        if(confirm("Permanently delete this user from database?")) {
+            await db.collection('users').doc(id).delete();
+        }
+    }
+
+    async function approve(id, uid, amt) {
+        if(!confirm("Approve this?")) return;
+        const rRef = db.collection('requests').doc(id);
+        const rDoc = await rRef.get();
+        const rData = rDoc.data();
+        const userQuery = await db.collection('users').where('email', '==', rData.email).get();
+        if(!userQuery.empty) {
+            const uRef = userQuery.docs[0].ref;
+            const currentBal = Number(userQuery.docs[0].data().balance || 0);
+            const newBal = (rData.type === 'withdrawal') ? currentBal - Number(amt) : currentBal + Number(amt);
+            await uRef.update({ balance: newBal });
+            await rRef.update({ status: 'successful' });
+        }
+    }
+
+    async function decline(id) { if(confirm("Decline?")) await db.collection('requests').doc(id).update({ status: 'declined' }); }
+    
+    async function edit(id, type) {
+        const val = Number(document.getElementById('amt-'+id).value);
+        if(!val) return;
+        const uRef = db.collection('users').doc(id);
+        const uDoc = await uRef.get();
+        const newBal = (type === 'add') ? Number(uDoc.data().balance || 0) + val : Number(uDoc.data().balance || 0) - val;
+        await uRef.update({ balance: newBal });
+        document.getElementById('amt-'+id).value = '';
+    }
+
+    function filterUsers() {
+        let q = document.getElementById('userSearch').value.toLowerCase();
+        let rows = document.getElementsByClassName('user-row');
+        for (let r of rows) { r.style.display = r.innerText.toLowerCase().includes(q) ? "" : "none"; }
+    }
+</script>
+</body>
+</html>

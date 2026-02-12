@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBA DASHBOARD</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #002366; margin: 0; font-family: sans-serif; color: white; overflow-x: hidden; }
+        .header { display: flex; justify-content: space-between; padding: 20px; align-items: center; }
+        .sidebar-icon { font-size: 24px; cursor: pointer; }
+        .main-card { background: #1a3a8a; margin: 20px; padding: 40px 20px; border-radius: 45px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .main-card h1 { font-size: 45px; margin: 10px 0; }
+        .btn-row { display: flex; gap: 12px; padding: 0 20px; }
+        .action-btn { flex: 1; padding: 18px; border-radius: 18px; border: none; font-weight: bold; color: white; font-size: 16px; cursor: pointer; }
+        .btn-blue { background: #3498db; } .btn-green { background: #2ecc71; }
+        .btn-orange { background: #f39c12; width: calc(100% - 40px); margin: 15px 20px; padding: 20px; border-radius: 18px; border: none; color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
+        .activity-card { background: #0a2463; margin: 20px; padding: 25px; border-radius: 25px; }
+        
+        /* Sidebar Styling */
+        #sideNav { height: 100%; width: 0; position: fixed; z-index: 100; top: 0; left: 0; background-color: #05163d; overflow-x: hidden; transition: 0.5s; padding-top: 50px; }
+        #sideNav a { padding: 15px 25px; text-decoration: none; font-size: 18px; color: #fff; display: block; }
+        .side-profile { text-align: center; margin-bottom: 30px; }
+        .side-profile img { width: 80px; height: 80px; border-radius: 50%; border: 2px solid white; }
+        .closebtn { position: absolute; top: 10px; right: 25px; font-size: 36px; color: white; text-decoration: none; }
+
+        /* NEW: Support Floating Button Styling */
+        .support-float {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: #3498db;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            cursor: pointer;
+            text-decoration: none;
+            z-index: 99;
+            transition: transform 0.2s;
+        }
+        .support-float:hover { transform: scale(1.1); background-color: #2980b9; }
+    </style>
+</head>
+<body>
+
+<div id="sideNav">
+    <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+    <div class="side-profile">
+        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
+        <h3 id="user-display-name">Loading...</h3>
+    </div>
+    <a href="dashboard.html"><i class="fa fa-home"></i> Dashboard</a>
+    <a href="transactions.html"><i class="fa fa-list"></i> Transactions</a>
+    <a href="profile.html"><i class="fa fa-user"></i> My Profile</a>
+    <a href="apply_loan.html"><i class="fa fa-money-bill-transfer"></i> Apply for Grant</a>
+    <a href="support.html"><i class="fa fa-headset"></i> Support</a> <a href="#" onclick="logout()"><i class="fa fa-sign-out"></i> Logout</a>
+</div>
+
+<div class="header">
+    <i class="fa fa-bars sidebar-icon" onclick="openNav()"></i>
+    <h2>SBA DASHBOARD</h2>
+    <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" style="width:40px;">
+</div>
+
+<div class="main-card">
+    <p>Total Balance</p>
+    <h1 id="balance-val">$0.00</h1>
+    <p style="color:#2ecc71;">Account Status: Active</p>
+</div>
+
+<div class="btn-row">
+    <button class="action-btn btn-blue" onclick="window.location.href='add_money.html'">Deposit</button>
+    <button class="action-btn btn-green" onclick="window.location.href='withdraw.html'">Withdrawal</button>
+</div>
+
+<button class="btn-orange" onclick="window.location.href='apply_loan.html'">Apply for Grant</button>
+
+<div class="activity-card">
+    <h3>Recent Activity</h3>
+    <div id="activity-list">Loading transactions...</div>
+</div>
+
+<a href="support.html" class="support-float">
+    <i class="fa fa-headset"></i>
+</a>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<script src="script.js"></script>
+<script>
+    function openNav() { document.getElementById("sideNav").style.width = "280px"; }
+    function closeNav() { document.getElementById("sideNav").style.width = "0"; }
+
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            db.collection('users').where('email', '==', user.email).onSnapshot(snap => {
+                if (!snap.empty) {
+                    const userData = snap.docs[0].data();
+                    document.getElementById('user-display-name').innerText = userData.fullName || "User";
+                    document.getElementById('balance-val').innerText = `$${Number(userData.balance || 0).toLocaleString()}`;
+                } else {
+                    document.getElementById('balance-val').innerText = "$0.00";
+                }
+            });
+
+            db.collection('requests')
+              .where('email', '==', user.email)
+              .onSnapshot(snap => {
+                let h = '';
+                snap.forEach(d => {
+                    const r = d.data();
+                    const statusColor = r.status === 'pending' ? '#f39c12' : (r.status === 'successful' ? '#2ecc71' : '#e74c3c');
+                    const displayType = r.type ? r.type.charAt(0).toUpperCase() + r.type.slice(1) : "Grant Request";
+                    
+                    h += `<div style="border-bottom:1px solid #1a3a8a; padding:10px 0;">
+                        <span>${displayType}</span><span style="float:right; color:${statusColor}">$${Number(r.amount).toLocaleString()} - ${r.status}</span>
+                    </div>`;
+                });
+                document.getElementById('activity-list').innerHTML = h || 'No recent activity';
+            });
+        } else {
+            window.location.href = "index.html";
+        }
+    });
+</script>
+</body>
+</html>

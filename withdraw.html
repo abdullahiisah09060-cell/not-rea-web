@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdraw Funds | SBA</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { background: #002d72; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; color: white; height: 100vh; }
+        .header { padding: 20px; display: flex; align-items: center; background: #001a41; }
+        .back-btn { font-size: 24px; cursor: pointer; margin-right: 20px; text-decoration: none; color: white; }
+        .container { padding: 20px; display: flex; justify-content: center; margin-top: 10px; }
+        .card { background: white; width: 100%; max-width: 400px; border-radius: 40px; padding: 40px 30px; color: #333; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; }
+        .balance-box { background: #eef3fb; padding: 12px; border-radius: 12px; color: #555; font-size: 16px; margin-bottom: 30px; }
+        .input-group { text-align: left; margin-bottom: 25px; }
+        .input-label { font-weight: bold; color: #002d72; font-size: 15px; margin-bottom: 10px; display: block; }
+        input, textarea { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 15px; box-sizing: border-box; font-size: 16px; background: #f9f9f9; outline: none; color: #333; }
+        .btn-withdraw { width: 100%; padding: 18px; background: #3498db; color: white; border: none; border-radius: 15px; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="dashboard.html" class="back-btn">←</a>
+        <div style="font-weight:bold; letter-spacing: 1px;">WITHDRAW FUNDS</div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="balance-box">
+                Available Balance: <b id="display-bal">$0.00</b>
+            </div>
+
+            <div class="input-group">
+                <span class="input-label">Amount ($)</span>
+                <input type="number" id="w-amount" placeholder="0.00">
+            </div>
+
+            <div class="input-group">
+                <span class="input-label">Wallet Address / Bank Details</span>
+                <textarea id="w-details" rows="4" placeholder="Enter Bitcoin address or Bank details"></textarea>
+            </div>
+
+            <button class="btn-withdraw" id="w-btn" onclick="submitWithdrawal()">Request Withdrawal</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // --- SYNCED BALANCE FETCHING ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // We look for the user by Email to match the Admin and Dashboard updates
+                db.collection('users').where('email', '==', user.email).onSnapshot(snap => {
+                    if(!snap.empty) {
+                        const userData = snap.docs[0].data();
+                        const bal = userData.balance || 0;
+                        document.getElementById('display-bal').innerText = "$" + Number(bal).toLocaleString();
+                    } else {
+                        document.getElementById('display-bal').innerText = "$0.00";
+                    }
+                });
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        async function submitWithdrawal() {
+            const amtValue = document.getElementById('w-amount').value;
+            const details = document.getElementById('w-details').value;
+            const btn = document.getElementById('w-btn');
+            
+            if(!amtValue || !details) return alert("Please fill all fields");
+
+            const amount = parseFloat(amtValue);
+            const user = auth.currentUser;
+
+            if(!user) return alert("Session expired.");
+
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+
+            try {
+                // Fetch the profile by email to verify funds
+                const userQuery = await db.collection('users').where('email', '==', user.email).get();
+                
+                if(userQuery.empty) {
+                    btn.disabled = false;
+                    btn.innerText = "Request Withdrawal";
+                    return alert("User profile not found. Please refresh.");
+                }
+
+                const uDoc = userQuery.docs[0];
+                const currentBal = uDoc.data().balance || 0;
+                const userName = uDoc.data().fullName || "User";
+
+                if(amount > currentBal) {
+                    btn.disabled = false;
+                    btn.innerText = "Request Withdrawal";
+                    return alert("Insufficient Funds! Your balance is $" + currentBal.toLocaleString());
+                }
+                
+                if(amount <= 0) {
+                    btn.disabled = false;
+                    btn.innerText = "Request Withdrawal";
+                    return alert("Please enter a valid amount");
+                }
+
+                // Save Request to Firebase
+                await db.collection('requests').add({
+                    userId: user.uid,
+                    userName: userName,
+                    email: user.email, // THIS ENSURES THE ADMIN CAN FIND THE USER
+                    type: 'Withdrawal', 
+                    amount: amount,
+                    details: details,
+                    status: 'pending',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAt: new Date()
+                });
+
+                alert("Withdrawal request sent successfully!");
+                window.location.href = 'dashboard.html';
+
+            } catch (error) {
+                alert("Error: " + error.message);
+                btn.disabled = false;
+                btn.innerText = "Request Withdrawal";
+            }
+        }
+    </script>
+</body>
+</html>
