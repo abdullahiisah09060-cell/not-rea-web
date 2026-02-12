@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBA MASTER | CONTROL PANEL</title>
+    <title>SBA MASTER ADMIN</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
@@ -11,74 +11,59 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #0b0e11; color: white; font-family: sans-serif; margin: 0; display: none; }
-        
-        /* Navigation Tabs */
         .tabs { display: flex; background: #161a1e; position: sticky; top: 0; border-bottom: 2px solid #3498db; z-index: 100; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; font-size: 11px; text-transform: uppercase; position: relative; color: #888; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; position: relative; color: #888; font-size: 12px; }
         .tab.active { color: #3498db; background: rgba(52, 152, 219, 0.1); }
-        .dot { height: 10px; width: 10px; background: #ff4757; border-radius: 50%; position: absolute; top: 10px; right: 15%; display: none; border: 2px solid #161a1e; }
+        .dot { height: 10px; width: 10px; background: red; border-radius: 50%; position: absolute; top: 10px; right: 15%; display: none; border: 2px solid #161a1e; }
         
-        .container { padding: 15px; }
-        .page { display: none; }
+        .page { display: none; padding: 15px; }
         .page.active { display: block; }
         
-        .card { background: #161a1e; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #2c2f36; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .btn { padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn:active { transform: scale(0.95); }
+        .card { background: #161a1e; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #2c2f36; }
+        .btn { padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
+        input { width: 100%; padding: 12px; margin: 8px 0; background: #0b0e11; border: 1px solid #3498db; color: white; border-radius: 8px; box-sizing: border-box; }
         
-        input { width: 100%; padding: 12px; margin: 8px 0; background: #0b0e11; border: 1px solid #3498db; color: white; border-radius: 8px; box-sizing: border-box; outline: none; }
-        
-        /* Full Chat Overlay */
-        #chat-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; display: none; flex-direction: column; z-index: 1000; }
-        .chat-top { padding: 15px; background: #161a1e; border-bottom: 1px solid #3498db; display: flex; align-items: center; gap: 15px; }
-        #chat-msgs { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .bubble { padding: 10px 14px; border-radius: 12px; max-width: 80%; font-size: 14px; }
-        .b-admin { background: #3498db; align-self: flex-end; }
-        .b-user { background: #2c2f36; align-self: flex-start; border: 1px solid #444; }
+        /* Overlay Chat */
+        #chat-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; display: none; flex-direction: column; z-index: 1000; }
+        .chat-head { padding: 15px; background: #161a1e; border-bottom: 1px solid #3498db; display: flex; align-items: center; gap: 15px; }
+        #m-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .bbl { padding: 10px 14px; border-radius: 10px; max-width: 80%; font-size: 14px; }
+        .b-adm { background: #3498db; align-self: flex-end; }
+        .b-usr { background: #2c2f36; align-self: flex-start; border: 1px solid #444; }
     </style>
 </head>
 <body>
 
 <div class="tabs">
-    <div class="tab active" onclick="switchTab('req-page')">Requests <div id="req-dot" class="dot"></div></div>
-    <div class="tab" onclick="switchTab('usr-page')">Users</div>
-    <div class="tab" onclick="switchTab('msg-page')">Inbox <div id="msg-dot" class="dot"></div></div>
-    <div class="tab" onclick="auth.signOut()" style="color:#e74c3c;"><i class="fa fa-power-off"></i></div>
+    <div class="tab active" onclick="tab('r-pg')">Requests <div id="r-dt" class="dot"></div></div>
+    <div class="tab" onclick="tab('u-pg')">Users</div>
+    <div class="tab" onclick="tab('c-pg')">Inbox <div id="c-dt" class="dot"></div></div>
+    <div class="tab" onclick="auth.signOut()"><i class="fa fa-sign-out-alt"></i></div>
 </div>
 
-<div class="container">
-    <div id="req-page" class="page active">
-        <h3 style="color:#888;">Pending Grant/Withdrawal</h3>
-        <div id="req-list">Loading...</div>
-    </div>
-
-    <div id="usr-page" class="page">
-        <input type="text" id="userSearch" placeholder="Search users..." onkeyup="filterUsers()">
-        <div id="user-list">Loading...</div>
-    </div>
-
-    <div id="msg-page" class="page">
-        <h3 style="color:#888;">Customer Messages</h3>
-        <div id="inbox-list">No chats available.</div>
-    </div>
+<div id="r-pg" class="page active"><div id="req-list">Loading...</div></div>
+<div id="u-pg" class="page">
+    <input type="text" id="u-search" placeholder="Search name/email..." onkeyup="search()">
+    <div id="usr-list">Loading...</div>
 </div>
+<div id="c-pg" class="page"><div id="cht-list">No messages...</div></div>
 
-<div id="chat-overlay">
-    <div class="chat-top">
-        <i class="fa fa-arrow-left" onclick="closeChat()"></i>
-        <span id="chat-target">User Email</span>
+<div id="chat-view">
+    <div class="chat-head">
+        <i class="fa fa-arrow-left" onclick="closeC()"></i>
+        <span id="chat-name">User</span>
     </div>
-    <div id="chat-msgs"></div>
-    <div style="padding:15px; background: #161a1e; display: flex; gap: 10px;">
-        <input type="text" id="admin-reply" placeholder="Type response...">
-        <button class="btn" style="background:#2ecc71;" onclick="sendAdminReply()">SEND</button>
+    <div id="m-list"></div>
+    <div style="padding:15px; background:#161a1e; display:flex; gap:10px;">
+        <input type="text" id="adm-inp" placeholder="Type reply...">
+        <button class="btn" style="background:#2ecc71;" onclick="sendR()">SEND</button>
     </div>
 </div>
 
 <script>
-    let activeUserChat = "";
+    let curEmail = "";
 
-    function switchTab(id) {
+    function tab(id) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -86,136 +71,103 @@
     }
 
     auth.onAuthStateChanged(u => {
-        if(u && u.email === "abdullahiisah09060@gmail.com") { 
-            document.body.style.display="block"; 
-            initListeners(); 
-        } else { window.location.href="index.html"; }
+        if(u && u.email === "abdullahiisah09060@gmail.com") { document.body.style.display="block"; start(); }
+        else { window.location.href="index.html"; }
     });
 
-    function initListeners() {
-        // 1. Live Requests Listener
+    function start() {
+        // Live Requests
         db.collection('requests').where('status', '==', 'pending').onSnapshot(snap => {
-            document.getElementById('req-dot').style.display = snap.empty ? 'none' : 'block';
-            let h = '';
-            snap.forEach(doc => {
+            document.getElementById('r-dt').style.display = snap.empty ? 'none' : 'block';
+            let h = ''; snap.forEach(doc => {
                 const r = doc.data();
-                h += `<div class="card">
-                    <b>${r.email}</b><br><small>${r.type}</small>
-                    <h2 style="color:#2ecc71;">$${Number(r.amount).toLocaleString()}</h2>
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn" style="background:#2ecc71; flex:1;" onclick="handleReq('${doc.id}', '${r.email}', ${r.amount}, 'approve')">APPROVE</button>
-                        <button class="btn" style="background:#e74c3c; flex:1;" onclick="handleReq('${doc.id}', '', 0, 'decline')">DECLINE</button>
-                    </div>
-                </div>`;
+                h += `<div class="card"><b>${r.email}</b><br><small>${r.type}</small><h3>$${r.amount}</h3>
+                <button class="btn" style="background:#2ecc71; width:48%;" onclick="approve('${doc.id}', '${r.email}', ${r.amount})">APPROVE</button>
+                <button class="btn" style="background:#e74c3c; width:48%;" onclick="decline('${doc.id}')">DECLINE</button></div>`;
             });
-            document.getElementById('req-list').innerHTML = h || "All caught up!";
+            document.getElementById('req-list').innerHTML = h || "No requests.";
         });
 
-        // 2. Live Users Listener
+        // Live Users
         db.collection('users').onSnapshot(snap => {
-            let h = '';
-            snap.forEach(doc => {
+            let h = ''; snap.forEach(doc => {
                 const u = doc.data();
-                h += `<div class="card user-item">
-                    <b>${u.fullName || 'No Name'}</b><br><small>${u.email}</small><br>
-                    <b style="color:#3498db;">Bal: $${Number(u.balance || 0).toLocaleString()}</b>
-                    <input type="number" id="val-${doc.id}" placeholder="Amount">
-                    <div style="display:flex; gap:5px;">
-                        <button class="btn" style="background:#3498db; flex:1;" onclick="editBal('${doc.id}', 'add')">ADD</button>
-                        <button class="btn" style="background:#e74c3c; flex:1;" onclick="editBal('${doc.id}', 'sub')">SUB</button>
-                    </div>
-                    <button class="btn" style="background:#444; width:100%; margin-top:10px;" onclick="delUser('${doc.id}')">DELETE</button>
-                </div>`;
+                h += `<div class="card u-item"><b>${u.fullName}</b><br><small>${u.email}</small><br><b>$${u.balance}</b>
+                <input type="number" id="a-${doc.id}" placeholder="Amount">
+                <button class="btn" style="background:#3498db; width:48%;" onclick="upd('${doc.id}', 'add')">ADD</button>
+                <button class="btn" style="background:#444; width:48%;" onclick="upd('${doc.id}', 'sub')">SUB</button></div>`;
             });
-            document.getElementById('user-list').innerHTML = h;
+            document.getElementById('usr-list').innerHTML = h;
         });
 
-        // 3. Live Inbox Listener
+        // Live Inbox
         db.collection('chats').orderBy('timestamp', 'desc').onSnapshot(snap => {
-            let userMap = [];
-            let newNotice = false;
+            let uList = []; let unread = false;
             snap.forEach(doc => {
-                const d = doc.data();
-                if(!userMap.includes(d.userEmail)) {
-                    userMap.push(d.userEmail);
-                    if(d.sender === 'user') newNotice = true;
+                if(!uList.includes(doc.data().userEmail)) {
+                    uList.push(doc.data().userEmail);
+                    if(doc.data().sender === 'user') unread = true;
                 }
             });
-            document.getElementById('msg-dot').style.display = newNotice ? 'block' : 'none';
-            let h = '';
-            userMap.forEach(email => {
-                h += `<div class="card" onclick="openChat('${email}')" style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>${email}</span> <i class="fa fa-comment" style="color:#3498db;"></i>
-                </div>`;
+            document.getElementById('c-dt').style.display = unread ? 'block' : 'none';
+            let h = ''; uList.forEach(e => {
+                h += `<div class="card" onclick="openC('${e}')">${e} <span style="float:right;">→</span></div>`;
             });
-            document.getElementById('inbox-list').innerHTML = h || "No messages.";
+            document.getElementById('cht-list').innerHTML = h || "No messages.";
         });
     }
 
-    // --- Actions ---
-    async function handleReq(id, email, amt, act) {
-        if(!confirm("Are you sure?")) return;
-        if(act === 'approve') {
-            const uSnap = await db.collection('users').where('email', '==', email).get();
-            if(!uSnap.empty) {
-                const uRef = uSnap.docs[0].ref;
-                const oldBal = Number(uSnap.docs[0].data().balance || 0);
-                await uRef.update({ balance: oldBal + Number(amt) });
-                await db.collection('requests').doc(id).update({ status: 'successful' });
-            }
-        } else {
-            await db.collection('requests').doc(id).update({ status: 'declined' });
+    async function approve(id, email, amt) {
+        const uQuery = await db.collection('users').where('email', '==', email).get();
+        if(!uQuery.empty) {
+            const uRef = uQuery.docs[0].ref;
+            const current = Number(uQuery.docs[0].data().balance || 0);
+            await uRef.update({ balance: current + Number(amt) });
+            await db.collection('requests').doc(id).update({ status: 'successful' });
         }
     }
 
-    async function editBal(id, type) {
-        const amt = Number(document.getElementById('val-'+id).value);
+    async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
+
+    async function upd(id, type) {
+        const amt = Number(document.getElementById('a-'+id).value);
         if(!amt) return;
         const ref = db.collection('users').doc(id);
         const doc = await ref.get();
-        const cur = Number(doc.data().balance || 0);
-        await ref.update({ balance: type === 'add' ? cur + amt : cur - amt });
-        document.getElementById('val-'+id).value = '';
+        const b = Number(doc.data().balance || 0);
+        await ref.update({ balance: type === 'add' ? b + amt : b - amt });
+        document.getElementById('a-'+id).value = '';
     }
 
-    async function delUser(id) { if(confirm("Permanently delete?")) await db.collection('users').doc(id).delete(); }
-
-    // --- Live Chat Overlay ---
-    function openChat(email) {
-        activeUserChat = email;
-        document.getElementById('chat-target').innerText = email;
-        document.getElementById('chat-overlay').style.display = 'flex';
-        
-        db.collection('chats').where('userEmail', '==', email).orderBy('timestamp', 'asc').onSnapshot(snap => {
-            let h = '';
-            snap.forEach(doc => {
+    function openC(e) {
+        curEmail = e;
+        document.getElementById('chat-name').innerText = e;
+        document.getElementById('chat-view').style.display = 'flex';
+        db.collection('chats').where('userEmail', '==', e).orderBy('timestamp', 'asc').onSnapshot(snap => {
+            let h = ''; snap.forEach(doc => {
                 const m = doc.data();
-                const bClass = m.sender === 'admin' ? 'b-admin' : 'b-user';
-                h += `<div class="bubble ${bClass}">${m.message}</div>`;
+                h += `<div class="bbl ${m.sender==='admin'?'b-adm':'b-usr'}">${m.message}</div>`;
             });
-            const box = document.getElementById('chat-msgs');
-            box.innerHTML = h;
-            box.scrollTop = box.scrollHeight;
+            const l = document.getElementById('m-list');
+            l.innerHTML = h;
+            l.scrollTop = l.scrollHeight;
         });
     }
 
-    function closeChat() { document.getElementById('chat-overlay').style.display = 'none'; }
+    function closeC() { document.getElementById('chat-view').style.display = 'none'; }
 
-    async function sendAdminReply() {
-        const inp = document.getElementById('admin-reply');
-        if(!inp.value.trim()) return;
+    async function sendR() {
+        const i = document.getElementById('adm-inp');
+        if(!i.value.trim()) return;
         await db.collection('chats').add({
-            userEmail: activeUserChat,
-            message: inp.value,
-            sender: 'admin',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            userEmail: curEmail, message: i.value, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-        inp.value = "";
+        i.value = "";
     }
 
-    function filterUsers() {
-        let q = document.getElementById('userSearch').value.toLowerCase();
-        document.querySelectorAll('.user-item').forEach(c => c.style.display = c.innerText.toLowerCase().includes(q) ? '' : 'none');
+    function search() {
+        let q = document.getElementById('u-search').value.toLowerCase();
+        document.querySelectorAll('.u-item').forEach(i => i.style.display = i.innerText.toLowerCase().includes(q) ? '' : 'none');
     }
 </script>
 </body>
