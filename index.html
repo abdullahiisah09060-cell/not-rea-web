@@ -3,96 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBA Grant - Access</title>
+    <title>SBA | MASTER ADMIN</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="script.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #002d72; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .card { width: 90%; max-width: 400px; background: white; border-radius: 30px; padding: 40px 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-align: center; }
-        .app-title { color: #002d72; font-weight: bold; font-size: 22px; margin-bottom: 30px; text-transform: uppercase; }
-        .toggle-box { display: flex; background: #f4f7f6; border-radius: 12px; padding: 5px; margin-bottom: 35px; }
-        .tgl-btn { flex: 1; padding: 12px; cursor: pointer; border-radius: 10px; font-size: 14px; font-weight: bold; border: none; outline: none; transition: 0.3s; }
-        .active { background: #002d72; color: white; }
-        .inactive { background: transparent; color: #888; }
-        input { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box; margin-bottom: 15px; font-size: 16px; outline: none; }
-        .btn-main { width: 100%; padding: 18px; background: #002d72; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .footer-links { font-size: 14px; margin: 20px 0; color: #666; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        body { background: #0b0e11; color: white; font-family: sans-serif; margin: 0; display: none; }
+        .tab-bar { display: flex; background: #161a1e; border-bottom: 2px solid #3498db; position: sticky; top: 0; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .active { color: #3498db; border-bottom: 3px solid #3498db; }
+        .card { background: #161a1e; padding: 15px; margin: 10px; border-radius: 10px; border: 1px solid #2c2f36; }
+        .btn { border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px; }
+        .btn-app { background: #2ecc71; color: white; width: 48%; }
+        .btn-dec { background: #e74c3c; color: white; width: 48%; }
+        .btn-del { background: #444; color: #ff4757; width: 100%; border: 1px solid #ff4757; }
+        .chat-input { width: 70%; padding: 8px; border-radius: 5px; background: #0b0e11; color: white; border: 1px solid #3498db; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div class="app-title">SBA GRANT PORTAL</div>
-        <div class="toggle-box">
-            <button id="btn-login" class="tgl-btn active" onclick="showTab('login')">Log In</button>
-            <button id="btn-signup" class="tgl-btn inactive" onclick="showTab('signup')">Sign Up</button>
-        </div>
+<div class="tab-bar">
+    <div class="tab active" onclick="openTab('req')">Requests</div>
+    <div class="tab" onclick="openTab('users')">Users</div>
+    <div class="tab" onclick="openTab('msgs')">Messages</div>
+    <div class="tab" style="color:red" onclick="logout()">Logout</div>
+</div>
 
-        <div id="login-section">
-            <input type="email" id="l-email" placeholder="Email Address">
-            <input type="password" id="l-pass" placeholder="Password">
-            <button class="btn-main" onclick="login()">Log In</button>
-        </div>
+<div id="req" class="content">
+    <h3 style="padding-left:10px">Pending Approvals</h3>
+    <div id="request-list"></div>
+</div>
 
-        <div id="signup-section" style="display:none;">
-            <input type="text" id="s-name" placeholder="Full Name">
-            <input type="email" id="s-email" placeholder="Email Address">
-            <input type="password" id="s-pass" placeholder="Password">
-            <div class="footer-links">
-                <input type="checkbox" id="terms-check">
-                <label for="terms-check">Agree to <a href="#">Terms</a></label>
-            </div>
-            <button class="btn-main" onclick="signup()">Sign Up</button>
-        </div>
-    </div>
+<div id="users" class="content" style="display:none">
+    <h3 style="padding-left:10px">All Users</h3>
+    <div id="user-list"></div>
+</div>
 
-    <script src="script.js"></script>
-    <script>
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                if (user.email === "abdullahiisah09060@gmail.com") {
-                    window.location.href = 'admin_dashboard.html';
-                } else {
-                    window.location.href = 'dashboard.html';
-                }
-            }
+<div id="msgs" class="content" style="display:none">
+    <h3 style="padding-left:10px">Support Inbox</h3>
+    <div id="chat-list"></div>
+</div>
+
+<script>
+    function openTab(id) {
+        document.querySelectorAll('.content').forEach(c => c.style.display = 'none');
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(id).style.display = 'block';
+        event.currentTarget.classList.add('active');
+    }
+
+    auth.onAuthStateChanged(u => {
+        if(u && u.email === "abdullahiisah09060@gmail.com") {
+            document.body.style.display = "block";
+            loadAdminData();
+        } else { window.location.href = "index.html"; }
+    });
+
+    function loadAdminData() {
+        // 1. Load Requests
+        db.collection('requests').where('status', '==', 'pending').onSnapshot(snap => {
+            let h = '';
+            snap.forEach(doc => {
+                const r = doc.data();
+                h += `<div class="card">
+                    <b>${r.email}</b><br>Type: ${r.type} | Amount: $${r.amount}
+                    <div style="display:flex; justify-content:space-between; margin-top:10px">
+                        <button class="btn btn-app" onclick="approveReq('${doc.id}', '${r.email}', ${r.amount}, '${r.type}')">APPROVE</button>
+                        <button class="btn btn-dec" onclick="declineReq('${doc.id}')">DECLINE</button>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('request-list').innerHTML = h || '<p align="center">No requests.</p>';
         });
 
-        function showTab(type) {
-            document.getElementById('login-section').style.display = type === 'login' ? 'block' : 'none';
-            document.getElementById('signup-section').style.display = type === 'login' ? 'none' : 'block';
-            document.getElementById('btn-login').className = type === 'login' ? 'tgl-btn active' : 'tgl-btn inactive';
-            document.getElementById('btn-signup').className = type === 'signup' ? 'tgl-btn active' : 'tgl-btn inactive';
-        }
+        // 2. Load Users (With Delete & Balance Edit)
+        db.collection('users').onSnapshot(snap => {
+            let h = '';
+            snap.forEach(doc => {
+                const u = doc.data();
+                h += `<div class="card">
+                    <b>${u.fullName}</b> (${u.email})<br>Balance: <span style="color:#2ecc71">$${u.balance}</span>
+                    <div style="margin: 10px 0">
+                        <input type="number" id="amt-${doc.id}" style="width:60px" placeholder="$">
+                        <button class="btn" style="background:#3498db; color:white" onclick="adjBal('${doc.id}', 'add')">ADD</button>
+                        <button class="btn" style="background:#888; color:white" onclick="adjBal('${doc.id}', 'sub')">SUB</button>
+                    </div>
+                    <button class="btn btn-del" onclick="delUser('${doc.id}')">DELETE USER</button>
+                </div>`;
+            });
+            document.getElementById('user-list').innerHTML = h;
+        });
 
-        async function signup() {
-            const name = document.getElementById('s-name').value;
-            const email = document.getElementById('s-email').value;
-            const pass = document.getElementById('s-pass').value;
-            if (!name || !email || !pass || !document.getElementById('terms-check').checked) return alert("Fill all fields and agree to terms");
+        // 3. Load Chats
+        db.collection('chats').orderBy('timestamp', 'desc').onSnapshot(snap => {
+            let groups = {};
+            snap.forEach(doc => { 
+                let m = doc.data(); 
+                if(!groups[m.userEmail]) groups[m.userEmail] = { msg: m.message, sender: m.sender };
+            });
+            let h = '';
+            for(let email in groups) {
+                h += `<div class="card">
+                    <small style="color:#3498db">${email}</small>
+                    <p>${groups[email].msg}</p>
+                    <input type="text" id="rep-${email.replace(/[^a-z]/g,'')}" class="chat-input" placeholder="Reply...">
+                    <button class="btn" style="background:#2ecc71; color:white" onclick="reply('${email}')">SEND</button>
+                </div>`;
+            }
+            document.getElementById('chat-list').innerHTML = h;
+        });
+    }
 
-            try {
-                const cred = await auth.createUserWithEmailAndPassword(email, pass);
-                // CRITICAL FIX: Use email as Doc ID
-                await db.collection('users').doc(email).set({
-                    fullName: name,
-                    email: email,
-                    uid: cred.user.uid,
-                    balance: 0,
-                    profilePic: "",
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                alert("Account Created!");
-            } catch (err) { alert(err.message); }
+    // --- ACTIONS ---
+    async function approveReq(id, email, amt, type) {
+        if(!confirm("Approve this?")) return;
+        const uDoc = await db.collection('users').doc(email).get();
+        if(uDoc.exists) {
+            let cur = Number(uDoc.data().balance || 0);
+            let newBal = (type === 'withdrawal') ? cur - amt : cur + amt;
+            await db.collection('users').doc(email).update({ balance: newBal });
+            await db.collection('requests').doc(id).update({ status: 'successful' });
         }
+    }
 
-        async function login() {
-            const email = document.getElementById('l-email').value;
-            const pass = document.getElementById('l-pass').value;
-            try { await auth.signInWithEmailAndPassword(email, pass); } 
-            catch (err) { alert(err.message); }
-        }
-    </script>
+    async function declineReq(id) {
+        await db.collection('requests').doc(id).update({ status: 'declined' });
+    }
+
+    async function adjBal(docId, type) {
+        let v = Number(document.getElementById('amt-'+docId).value);
+        let ref = db.collection('users').doc(docId);
+        let d = await ref.get();
+        let b = Number(d.data().balance || 0);
+        await ref.update({ balance: type === 'add' ? b + v : b - v });
+    }
+
+    async function delUser(id) {
+        if(confirm("Delete permanently?")) await db.collection('users').doc(id).delete();
+    }
+
+    async function reply(email) {
+        let cid = email.replace(/[^a-z]/g,'');
+        let txt = document.getElementById('rep-'+cid).value;
+        if(!txt) return;
+        await db.collection('chats').add({
+            userEmail: email, message: txt, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('rep-'+cid).value = '';
+    }
+</script>
 </body>
 </html>
