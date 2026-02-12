@@ -1,4 +1,3 @@
-// Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDv4-CogG4VR7_NMH3AEEvt2ArWWw6f2m0",
   authDomain: "sba-grant-us.firebaseapp.com",
@@ -8,67 +7,37 @@ const firebaseConfig = {
   appId: "1:458051323380:web:1f6ef0823034a3fed7a5a1"
 };
 
-// Initialize Firebase correctly
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-
-// DEFINE GLOBALLY - This fixes the "auth is not defined" error
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// --- LOGIN FUNCTION ---
+// --- AUTH ---
 function login() {
     const e = document.getElementById('l-email').value.trim().toLowerCase();
     const p = document.getElementById('l-pass').value;
+    if(!e || !p) return alert("Enter details");
 
-    if(!e || !p) return alert("Please enter email and password");
-
-    auth.signInWithEmailAndPassword(e, p).then((userCredential) => {
-        const user = userCredential.user;
-        // Redirect based on email
-        if (user.email === "abdullahiisah09060@gmail.com") {
-            window.location.href = 'admin_dashboard.html';
-        } else {
-            window.location.href = 'dashboard.html';
-        }
-    }).catch(err => {
-        alert("Login Error: " + err.message);
-    });
+    auth.signInWithEmailAndPassword(e, p).then(u => {
+        window.location.href = (u.user.email === "abdullahiisah09060@gmail.com") ? 'admin_dashboard.html' : 'dashboard.html';
+    }).catch(err => alert(err.message));
 }
 
-// --- SIGNUP FUNCTION ---
 function signup() {
     const n = document.getElementById('s-name').value.trim();
     const e = document.getElementById('s-email').value.trim().toLowerCase();
     const p = document.getElementById('s-pass').value;
-    const terms = document.getElementById('terms-check');
-
-    if(terms && !terms.checked) return alert("You must agree to the Terms & Conditions");
-    if(!n || !e || !p) return alert("Please fill all fields");
+    if(!n || !e || !p) return alert("Fill all fields");
 
     auth.createUserWithEmailAndPassword(e, p).then(cred => {
         return db.collection('users').doc(cred.user.uid).set({
-            fullName: n,
-            email: e,
-            balance: 0,
-            status: 'Active',
-            uid: cred.user.uid
+            fullName: n, email: e, balance: 0, status: 'Active', uid: cred.user.uid
         });
-    }).then(() => {
-        window.location.href = 'dashboard.html';
-    }).catch(err => alert(err.message));
+    }).then(() => window.location.href = 'dashboard.html').catch(err => alert(err.message));
 }
 
-// --- LOGOUT FUNCTION ---
-function logout() {
-    auth.signOut().then(() => {
-        window.location.href = 'index.html';
-    });
-}
+function logout() { auth.signOut().then(() => window.location.href = 'index.html'); }
 
-// --- LIVE CHAT ENGINE ---
-// email: the user email to track, containerId: where to show messages, isUserSide: true for user page
+// --- LIVE CHAT ENGINE (The Fix) ---
 function listenToChat(email, containerId, isUserSide) {
     const box = document.getElementById(containerId);
     if (!box) return;
@@ -77,9 +46,7 @@ function listenToChat(email, containerId, isUserSide) {
       .where('userEmail', '==', email)
       .orderBy('timestamp', 'asc')
       .onSnapshot(snap => {
-          // Keep welcome message on user side
-          box.innerHTML = isUserSide ? '<div class="bubble a-msg">Hello! How can we help you today?</div>' : '';
-          
+          box.innerHTML = isUserSide ? '<div class="bubble a-msg">Hello! Welcome to SBA Support. How can we help you?</div>' : '';
           snap.forEach(doc => {
               const d = doc.data();
               const side = d.sender === 'user' ? (isUserSide ? 'u-msg' : 'b-usr') : (isUserSide ? 'a-msg' : 'b-adm');
@@ -92,5 +59,5 @@ function listenToChat(email, containerId, isUserSide) {
               }
           });
           box.scrollTop = box.scrollHeight;
-      }, err => console.error("Chat error:", err));
+      });
 }
