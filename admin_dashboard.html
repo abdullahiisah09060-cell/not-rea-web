@@ -3,150 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBA Admin Panel</title>
+    <title>SBA | MASTER ADMIN</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="script.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #0b0e11; color: white; font-family: sans-serif; margin: 0; display: none; }
-        .tabs { display: flex; background: #161a1e; border-bottom: 2px solid #3498db; position: sticky; top: 0; z-index: 100; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 12px; font-weight: bold; color: #888; }
-        .tab.active { color: #3498db; background: rgba(52, 152, 219, 0.1); }
-        .page { display: none; padding: 15px; }
-        .page.active { display: block; }
-        .card { background: #161a1e; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #2c2f36; }
-        .btn { padding: 8px 12px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
-        input { width: 100%; padding: 10px; margin: 5px 0; background: #0b0e11; border: 1px solid #3498db; color: white; border-radius: 8px; box-sizing: border-box; }
-        #chat-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        #chat-box-admin { width: 95%; max-width: 400px; height: 80vh; background: #161a1e; border-radius: 12px; display: flex; flex-direction: column; }
+        body { background-color: #0b0e11; color: white; font-family: sans-serif; padding: 0; margin: 0; display: none; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #161a1e; padding: 15px; border-bottom: 2px solid #3498db; }
+        .tab-bar { display: flex; background: #161a1e; border-bottom: 1px solid #2c2f36; position: sticky; top: 0; z-index: 100; }
+        .tab { flex: 1; padding: 15px; text-align: center; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #888; cursor: pointer; position: relative; }
+        .tab.active { color: #3498db; border-bottom: 3px solid #3498db; background: rgba(52, 152, 219, 0.1); }
+        .badge { position: absolute; top: 10px; right: 15%; width: 8px; height: 8px; background: #ff4757; border-radius: 50%; display: none; box-shadow: 0 0 5px #ff4757; }
+        .content-area { padding: 15px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .stat-container { display: flex; gap: 10px; margin-bottom: 20px; }
+        .stat-box { background: rgba(52, 152, 219, 0.1); padding: 15px; border-radius: 12px; border: 1px solid #3498db; text-align: center; flex: 1; }
+        .stat-box b { font-size: 18px; display: block; margin-top: 5px; }
+        .search-box { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #2c2f36; background: #1c1f24; color: white; outline: none; box-sizing: border-box; }
+        .card { background: #161a1e; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #2c2f36; }
+        .row-content { display: flex; justify-content: space-between; align-items: flex-start; }
+        .info b { font-size: 14px; display: block; }
+        .info small { color: #888; font-size: 11px; }
+        .bal { color: #2ecc71; font-weight: bold; font-size: 14px; margin-top: 4px; display: block; }
+        .btn { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        .btn-approve { background: #2ecc71; color: white; width: 100%; margin-bottom: 5px; }
+        .btn-decline { background: #e74c3c; color: white; width: 100%; }
+        .btn-del { background: #444; color: #ff4757; margin-top: 10px; width: 100%; border: 1px solid #ff4757; }
+        .chat-bubble { background: #1c1f24; padding: 12px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #3498db; }
+        .chat-input-row { display: flex; gap: 8px; margin-top: 10px; }
+        .chat-input { flex: 1; padding: 8px; border-radius: 5px; border: 1px solid #3498db; background: #0b0e11; color: white; outline: none; }
     </style>
 </head>
 <body>
-    <div class="tabs">
-        <div class="tab active" onclick="showTab('p1')">Requests</div>
-        <div class="tab" onclick="showTab('p2')">Users</div>
-        <div class="tab" onclick="showTab('p3')">Inbox</div>
-        <div class="tab" onclick="logout()" style="color:red;">EXIT</div>
-    </div>
 
-    <div id="p1" class="page active"><div id="req-list">Loading Requests...</div></div>
-    <div id="p2" class="page">
-        <input type="text" id="searchUsr" placeholder="Search User..." onkeyup="filterUsers()">
-        <div id="usr-list">Loading Users...</div>
-    </div>
-    <div id="p3" class="page"><div id="msg-list">Loading Inbox...</div></div>
+<div class="header">
+    <h1 style="font-size: 16px; margin: 0;">SBA MASTER</h1>
+    <button onclick="logout()" class="btn" style="background:#e74c3c; color:white;">Logout</button>
+</div>
 
-    <div id="chat-overlay">
-        <div id="chat-box-admin">
-            <div style="padding:15px; border-bottom:1px solid #3498db; display:flex; justify-content:space-between;">
-                <span id="chat-target">User Email</span> <b onclick="closeChat()" style="cursor:pointer;">X</b>
-            </div>
-            <div id="admin-chat-content" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column;"></div>
-            <div style="padding:15px; display:flex; gap:5px;">
-                <input type="text" id="admin-msg" placeholder="Write reply...">
-                <button class="btn" style="background:#2ecc71;" onclick="sendAdminReply()">SEND</button>
-            </div>
+<div class="tab-bar">
+    <div class="tab active" onclick="openTab(event, 'pending-tab')">Requests <span id="dot-req" class="badge"></span></div>
+    <div class="tab" onclick="openTab(event, 'users-tab')">Users</div>
+    <div class="tab" onclick="openTab(event, 'chat-tab')">Messages <span id="dot-msg" class="badge"></span></div>
+</div>
+
+<div class="content-area">
+    <div id="pending-tab" class="tab-content active"><div id="request-list">Loading...</div></div>
+
+    <div id="users-tab" class="tab-content">
+        <div class="stat-container">
+            <div class="stat-box"><small>Users</small><b id="stat-users">0</b></div>
+            <div class="stat-box"><small>Vault</small><b id="stat-balance">$0</b></div>
         </div>
+        <input type="text" id="userSearch" class="search-box" placeholder="Search..." onkeyup="filterUsers()">
+        <div id="user-list"></div>
     </div>
 
-    <script>
-        let activeUserEmail = "";
+    <div id="chat-tab" class="tab-content"><div id="admin-chat-area">No new messages</div></div>
+</div>
 
-        function showTab(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            event.currentTarget.classList.add('active');
-        }
+<script>
+    function openTab(evt, tabName) {
+        let contents = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < contents.length; i++) contents[i].classList.remove("active");
+        let tabs = document.getElementsByClassName("tab");
+        for (let i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
 
-        auth.onAuthStateChanged(u => {
-            if(u && u.email === "abdullahiisah09060@gmail.com") { document.body.style.display="block"; startAdminListeners(); }
-            else window.location.href="index.html";
+    auth.onAuthStateChanged(u => { 
+        if(u && u.email === "abdullahiisah09060@gmail.com") { document.body.style.display="block"; loadData(); }
+        else { window.location.href="index.html"; }
+    });
+
+    function loadData() {
+        // Pending Requests
+        db.collection('requests').where('status', '==', 'pending').onSnapshot(snap => {
+            document.getElementById('dot-req').style.display = snap.empty ? "none" : "block";
+            let h = ''; snap.forEach(doc => { 
+                const r = doc.data();
+                h += `<div class="card"><div class="row-content">
+                    <div class="info"><b>${r.email}</b><small>${r.type || 'GRANT'}</small><span class="bal">$${Number(r.amount).toLocaleString()}</span></div>
+                    <div style="width:100px;">
+                        <button class="btn btn-approve" onclick="approve('${doc.id}', '${r.email}', ${r.amount})">APPROVE</button>
+                        <button class="btn btn-decline" onclick="decline('${doc.id}')">DECLINE</button>
+                    </div>
+                </div></div>`;
+            });
+            document.getElementById('request-list').innerHTML = h || '<p style="text-align:center;">No pending requests.</p>';
         });
 
-        function startAdminListeners() {
-            // 1. Pending Requests
-            db.collection('requests').where('status','==','pending').onSnapshot(s => {
-                let h = '';
-                s.forEach(doc => {
-                    const r = doc.data();
-                    h += `<div class="card"><b>${r.email}</b><br>$${r.amount} (${r.type})<br>
-                    <button class="btn" style="background:#2ecc71;" onclick="processReq('${doc.id}','${r.email}',${r.amount},'successful')">APPROVE</button>
-                    <button class="btn" style="background:#e74c3c;" onclick="processReq('${doc.id}','',0,'declined')">DECLINE</button></div>`;
-                });
-                document.getElementById('req-list').innerHTML = h || "No pending requests.";
+        // Users
+        db.collection('users').onSnapshot(snap => {
+            let h = ''; let total = 0; snap.forEach(doc => { 
+                const u = doc.data(); total += Number(u.balance || 0);
+                h += `<div class="card user-row">
+                    <div class="info"><b>${u.fullName || 'User'}</b><small>${u.email}</small><span class="bal">$${Number(u.balance || 0).toLocaleString()}</span></div>
+                    <div class="chat-input-row">
+                        <input type="number" id="amt-${doc.id}" class="chat-input" placeholder="Amount">
+                        <button class="btn" style="background:#3498db; color:white;" onclick="edit('${doc.id}', 'add')">ADD</button>
+                    </div>
+                    <button class="btn btn-del" onclick="deleteUser('${doc.id}')"><i class="fa fa-trash"></i> DELETE USER</button>
+                </div>`;
             });
+            document.getElementById('user-list').innerHTML = h;
+            document.getElementById('stat-users').innerText = snap.size;
+            document.getElementById('stat-balance').innerText = '$' + total.toLocaleString();
+        });
 
-            // 2. All Users
-            db.collection('users').onSnapshot(s => {
-                let h = '';
-                s.forEach(doc => {
-                    const u = doc.data();
-                    h += `<div class="card user-item"><b>${u.fullName}</b><br><small>${u.email}</small><br><b>Bal: $${u.balance}</b>
-                    <input type="number" id="bal-${doc.id}" placeholder="Enter Amount">
-                    <button class="btn" style="background:#3498db;" onclick="editBal('${doc.id}','add')">ADD</button>
-                    <button class="btn" style="background:#888;" onclick="editBal('${doc.id}','sub')">SUB</button>
-                    <button class="btn" style="background:red;width:100%;margin-top:5px;" onclick="delUsr('${doc.id}')">DELETE USER</button></div>`;
-                });
-                document.getElementById('usr-list').innerHTML = h;
+        // Inbox Grouping
+        db.collection('chats').orderBy('timestamp', 'desc').onSnapshot(snap => {
+            let groups = {}; snap.forEach(doc => {
+                let m = doc.data();
+                if(!groups[m.userEmail]) groups[m.userEmail] = { msg: m.message, id: doc.id, sender: m.sender };
             });
-
-            // 3. Inbox
-            db.collection('chats').orderBy('timestamp','desc').onSnapshot(s => {
-                let users = [];
-                s.forEach(d => { if(!users.includes(d.data().userEmail)) users.push(d.data().userEmail); });
-                let h = '';
-                users.forEach(e => { h += `<div class="card" onclick="openAdminChat('${e}')">${e} <span style="float:right;">Reply →</span></div>`; });
-                document.getElementById('msg-list').innerHTML = h || "No messages yet.";
-            });
-        }
-
-        async function processReq(id, email, amt, status) {
-            if(status === 'successful') {
-                const uS = await db.collection('users').where('email','==',email).get();
-                if(!uS.empty) {
-                    const ref = uS.docs[0].ref;
-                    const b = Number(uS.docs[0].data().balance || 0);
-                    await ref.update({ balance: b + Number(amt) });
-                }
+            let h = ''; let unreplied = 0;
+            for(let email in groups) {
+                if(groups[email].sender === 'user') unreplied++;
+                h += `<div class="chat-bubble">
+                    <small style="color:#3498db;">${email}</small>
+                    <p style="margin:5px 0; font-size:14px;">${groups[email].msg}</p>
+                    <div class="chat-input-row">
+                        <input type="text" id="rep-${email.replace(/[^a-zA-Z0-9]/g, '')}" class="chat-input" placeholder="Reply...">
+                        <button class="btn" style="background:#2ecc71; color:white;" onclick="reply('${email}')">SEND</button>
+                    </div>
+                </div>`;
             }
-            await db.collection('requests').doc(id).update({ status: status });
+            document.getElementById('dot-msg').style.display = unreplied > 0 ? "block" : "none";
+            document.getElementById('admin-chat-area').innerHTML = h || '<p style="text-align:center;">All clear!</p>';
+        });
+    }
+
+    async function reply(email) {
+        let cleanId = email.replace(/[^a-zA-Z0-9]/g, '');
+        let val = document.getElementById('rep-'+cleanId).value;
+        if(!val) return;
+        await db.collection('chats').add({
+            userEmail: email, message: val, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('rep-'+cleanId).value = '';
+    }
+
+    async function approve(docId, email, amt) {
+        if(!confirm("Approve?")) return;
+        const uQuery = await db.collection('users').where('email', '==', email).get();
+        if(!uQuery.empty) {
+            let userDoc = uQuery.docs[0];
+            let newBal = Number(userDoc.data().balance || 0) + Number(amt);
+            await userDoc.ref.update({ balance: newBal });
+            await db.collection('requests').doc(docId).update({ status: 'successful' });
         }
+    }
 
-        async function editBal(id, type) {
-            const v = Number(document.getElementById('bal-'+id).value);
-            if(!v) return;
-            const ref = db.collection('users').doc(id);
-            const d = await ref.get();
-            const b = Number(d.data().balance || 0);
-            await ref.update({ balance: type === 'add' ? b + v : b - v });
-            document.getElementById('bal-'+id).value = '';
+    async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
+
+    async function edit(id, type) {
+        let val = Number(document.getElementById('amt-'+id).value);
+        if(!val) return;
+        let ref = db.collection('users').doc(id);
+        let d = await ref.get();
+        await ref.update({ balance: Number(d.data().balance || 0) + val });
+        document.getElementById('amt-'+id).value = '';
+    }
+
+    async function deleteUser(id) {
+        if(confirm("Are you sure you want to delete this user? This cannot be undone.")) {
+            await db.collection('users').doc(id).delete();
         }
+    }
 
-        async function delUsr(id) { if(confirm("Permanently delete this user?")) await db.collection('users').doc(id).delete(); }
-
-        function openAdminChat(e) {
-            activeUserEmail = e;
-            document.getElementById('chat-target').innerText = e;
-            document.getElementById('chat-overlay').style.display = 'flex';
-            listenToChat(e, 'admin-chat-content', false);
-        }
-
-        function closeChat() { document.getElementById('chat-overlay').style.display = 'none'; }
-
-        async function sendAdminReply() {
-            const m = document.getElementById('admin-msg');
-            if(!m.value) return;
-            await db.collection('chats').add({ userEmail: activeUserEmail, message: m.value, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-            m.value = "";
-        }
-
-        function filterUsers() {
-            let q = document.getElementById('searchUsr').value.toLowerCase();
-            document.querySelectorAll('.user-item').forEach(c => c.style.display = c.innerText.toLowerCase().includes(q) ? '' : 'none');
-        }
-    </script>
+    function filterUsers() {
+        let q = document.getElementById('userSearch').value.toLowerCase();
+        let rows = document.getElementsByClassName('user-row');
+        for (let r of rows) { r.style.display = r.innerText.toLowerCase().includes(q) ? "" : "none"; }
+    }
+</script>
 </body>
 </html>
