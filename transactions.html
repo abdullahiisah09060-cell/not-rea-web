@@ -3,42 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transaction History</title>
+    <title>Transaction History | SBA</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="script.js"></script>
     <style>
-        body { background-color: #002d72; color: white; font-family: sans-serif; margin: 0; padding: 20px; }
-        .header { display: flex; align-items: center; margin-bottom: 30px; }
+        body { background-color: #002d72; color: white; font-family: sans-serif; margin: 0; padding: 0; }
+        .header { padding: 20px; background: #001a41; display: flex; align-items: center; position: sticky; top: 0; z-index: 10; }
         .back-btn { font-size: 24px; margin-right: 15px; cursor: pointer; text-decoration: none; color: white; }
-        .history-container { display: flex; flex-direction: column; gap: 15px; }
-        .history-item { background: rgba(255, 255, 255, 0.08); padding: 18px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .status-tag { font-size: 10px; text-transform: uppercase; font-weight: bold; margin-top: 5px; }
+        .history-container { padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .history-item { background: rgba(255, 255, 255, 0.08); padding: 15px; border-radius: 18px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .status-tag { font-size: 11px; text-transform: uppercase; font-weight: bold; margin-top: 4px; padding: 2px 8px; border-radius: 5px; display: inline-block; }
+        .type-label { font-weight: bold; font-size: 15px; text-transform: capitalize; }
+        .date-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+        .amt-label { font-size: 18px; font-weight: bold; color: #fff; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <a href="dashboard.html" class="back-btn">&#8592;</a>
-        <h2 style="margin: 0;">History</h2>
+        <a href="dashboard.html" class="back-btn">←</a>
+        <h2 style="margin: 0; font-size: 20px;">History</h2>
     </div>
 
     <div id="full-history-list" class="history-container">
-        <p style="text-align: center; color: rgba(255,255,255,0.5);">Loading transactions...</p>
+        <p style="text-align: center; color: rgba(255,255,255,0.5); margin-top: 20px;">Loading records...</p>
     </div>
 
+    <script src="script.js"></script>
     <script>
         auth.onAuthStateChanged(user => {
             if (user) {
+                // We query by EMAIL to match how we save requests in add_money/withdraw
                 db.collection('requests')
-                    .where('userId', '==', user.uid)
+                    .where('email', '==', user.email)
                     .onSnapshot(snapshot => {
                         let html = '';
                         if (snapshot.empty) {
-                            html = '<div style="text-align:center; margin-top:50px; color:gray;">No record found.</div>';
+                            html = '<div style="text-align:center; margin-top:50px; color:rgba(255,255,255,0.4);">No transactions found yet.</div>';
                         } else {
-                            // Sort logic to handle both text dates and proper timestamps
+                            // Sort by timestamp (newest first)
                             const sortedDocs = snapshot.docs.sort((a, b) => {
                                 const tA = a.data().timestamp ? a.data().timestamp.toMillis() : 0;
                                 const tB = b.data().timestamp ? b.data().timestamp.toMillis() : 0;
@@ -47,18 +51,23 @@
 
                             sortedDocs.forEach(doc => {
                                 const r = doc.data();
-                                const color = r.status === 'successful' ? '#2ecc71' : '#f39c12';
-                                const dateDisplay = r.timestamp ? r.timestamp.toDate().toLocaleString() : (r.dateText || "Recent");
+                                
+                                // Dynamic Status Colors
+                                let sColor = '#f39c12'; // pending
+                                if(r.status === 'successful' || r.status === 'approved') sColor = '#2ecc71';
+                                if(r.status === 'declined' || r.status === 'failed') sColor = '#e74c3c';
+
+                                const dateDisplay = r.timestamp ? new Date(r.timestamp.toDate()).toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'}) : (r.dateText || "Recent");
 
                                 html += `
                                 <div class="history-item">
                                     <div>
-                                        <div style="font-weight:bold; font-size:16px;">${r.type}</div>
-                                        <div style="font-size:12px; color:rgba(255,255,255,0.6);">${dateDisplay}</div>
-                                        <div class="status-tag" style="color:${color};">${r.status || 'pending'}</div>
+                                        <div class="type-label">${r.type || 'Request'}</div>
+                                        <div class="date-label">${dateDisplay}</div>
+                                        <div class="status-tag" style="background: ${sColor}22; color:${sColor};">● ${r.status || 'pending'}</div>
                                     </div>
                                     <div style="text-align:right;">
-                                        <div style="font-size:20px; font-weight:bold;">$${Number(r.amount || 0).toLocaleString()}</div>
+                                        <div class="amt-label">$${Number(r.amount || 0).toLocaleString()}</div>
                                     </div>
                                 </div>`;
                             });
