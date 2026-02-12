@@ -12,12 +12,12 @@
     <style>
         body { background: #0b0e11; color: white; font-family: sans-serif; margin: 0; display: none; }
         .tabs { display: flex; background: #161a1e; border-bottom: 2px solid #3498db; position: sticky; top: 0; z-index: 100; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 11px; font-weight: bold; color: #888; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 12px; font-weight: bold; color: #888; }
         .tab.active { color: #3498db; background: rgba(52, 152, 219, 0.1); }
         .page { display: none; padding: 15px; }
         .page.active { display: block; }
         .card { background: #161a1e; padding: 15px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #2c2f36; }
-        .btn { padding: 8px 12px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .btn { padding: 8px 12px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
         input { width: 100%; padding: 10px; margin: 5px 0; background: #0b0e11; border: 1px solid #3498db; color: white; border-radius: 8px; box-sizing: border-box; }
         #chat-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 1000; }
         #chat-box-admin { width: 95%; max-width: 400px; height: 80vh; background: #161a1e; border-radius: 12px; display: flex; flex-direction: column; }
@@ -30,92 +30,122 @@
         <div class="tab" onclick="showTab('p3')">Inbox</div>
         <div class="tab" onclick="logout()" style="color:red;">EXIT</div>
     </div>
-    <div id="p1" class="page active"><div id="req-list"></div></div>
-    <div id="p2" class="page"><div id="usr-list"></div></div>
-    <div id="p3" class="page"><div id="msg-list"></div></div>
+
+    <div id="p1" class="page active"><div id="req-list">Loading Requests...</div></div>
+    <div id="p2" class="page">
+        <input type="text" id="searchUsr" placeholder="Search User..." onkeyup="filterUsers()">
+        <div id="usr-list">Loading Users...</div>
+    </div>
+    <div id="p3" class="page"><div id="msg-list">Loading Inbox...</div></div>
 
     <div id="chat-overlay">
         <div id="chat-box-admin">
             <div style="padding:15px; border-bottom:1px solid #3498db; display:flex; justify-content:space-between;">
-                <span id="chat-target">User</span> <b onclick="closeChat()" style="cursor:pointer;">X</b>
+                <span id="chat-target">User Email</span> <b onclick="closeChat()" style="cursor:pointer;">X</b>
             </div>
             <div id="admin-chat-content" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column;"></div>
-            <div style="padding:10px; display:flex; gap:5px;">
-                <input type="text" id="admin-msg" placeholder="Reply...">
+            <div style="padding:15px; display:flex; gap:5px;">
+                <input type="text" id="admin-msg" placeholder="Write reply...">
                 <button class="btn" style="background:#2ecc71;" onclick="sendAdminReply()">SEND</button>
             </div>
         </div>
     </div>
 
     <script>
-        let activeUser = "";
+        let activeUserEmail = "";
+
         function showTab(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             event.currentTarget.classList.add('active');
         }
+
         auth.onAuthStateChanged(u => {
-            if(u && u.email === "abdullahiisah09060@gmail.com") { document.body.style.display="block"; load(); }
+            if(u && u.email === "abdullahiisah09060@gmail.com") { document.body.style.display="block"; startAdminListeners(); }
             else window.location.href="index.html";
         });
-        function load() {
+
+        function startAdminListeners() {
+            // 1. Pending Requests
             db.collection('requests').where('status','==','pending').onSnapshot(s => {
-                let h = ''; s.forEach(doc => {
+                let h = '';
+                s.forEach(doc => {
                     const r = doc.data();
-                    h += `<div class="card"><b>${r.email}</b><br>$${r.amount}<br>
-                    <button class="btn" style="background:#2ecc71;" onclick="act('${doc.id}','${r.email}',${r.amount},'successful')">Approve</button>
-                    <button class="btn" style="background:#e74c3c;" onclick="act('${doc.id}','',0,'declined')">Decline</button></div>`;
+                    h += `<div class="card"><b>${r.email}</b><br>$${r.amount} (${r.type})<br>
+                    <button class="btn" style="background:#2ecc71;" onclick="processReq('${doc.id}','${r.email}',${r.amount},'successful')">APPROVE</button>
+                    <button class="btn" style="background:#e74c3c;" onclick="processReq('${doc.id}','',0,'declined')">DECLINE</button></div>`;
                 });
-                document.getElementById('req-list').innerHTML = h || "No requests";
+                document.getElementById('req-list').innerHTML = h || "No pending requests.";
             });
+
+            // 2. All Users
             db.collection('users').onSnapshot(s => {
-                let h = ''; s.forEach(doc => {
+                let h = '';
+                s.forEach(doc => {
                     const u = doc.data();
-                    h += `<div class="card"><b>${u.fullName}</b> (${u.email})<br>Bal: $${u.balance}
-                    <input type="number" id="v-${doc.id}" placeholder="Amount">
-                    <button class="btn" style="background:#3498db;" onclick="adj('${doc.id}','add')">ADD</button>
-                    <button class="btn" style="background:#888;" onclick="adj('${doc.id}','sub')">SUB</button>
-                    <button class="btn" style="background:red;width:100%;" onclick="del('${doc.id}')">DELETE USER</button></div>`;
+                    h += `<div class="card user-item"><b>${u.fullName}</b><br><small>${u.email}</small><br><b>Bal: $${u.balance}</b>
+                    <input type="number" id="bal-${doc.id}" placeholder="Enter Amount">
+                    <button class="btn" style="background:#3498db;" onclick="editBal('${doc.id}','add')">ADD</button>
+                    <button class="btn" style="background:#888;" onclick="editBal('${doc.id}','sub')">SUB</button>
+                    <button class="btn" style="background:red;width:100%;margin-top:5px;" onclick="delUsr('${doc.id}')">DELETE USER</button></div>`;
                 });
                 document.getElementById('usr-list').innerHTML = h;
             });
+
+            // 3. Inbox
             db.collection('chats').orderBy('timestamp','desc').onSnapshot(s => {
-                let users = []; s.forEach(d => { if(!users.includes(d.data().userEmail)) users.push(d.data().userEmail); });
-                let h = ''; users.forEach(e => { h += `<div class="card" onclick="openAdminChat('${e}')">${e} →</div>`; });
-                document.getElementById('msg-list').innerHTML = h || "No messages";
+                let users = [];
+                s.forEach(d => { if(!users.includes(d.data().userEmail)) users.push(d.data().userEmail); });
+                let h = '';
+                users.forEach(e => { h += `<div class="card" onclick="openAdminChat('${e}')">${e} <span style="float:right;">Reply →</span></div>`; });
+                document.getElementById('msg-list').innerHTML = h || "No messages yet.";
             });
         }
-        async function act(id, e, a, s) {
-            if(s === 'successful') {
-                const uS = await db.collection('users').where('email','==',e).get();
+
+        async function processReq(id, email, amt, status) {
+            if(status === 'successful') {
+                const uS = await db.collection('users').where('email','==',email).get();
                 if(!uS.empty) {
-                    const r = uS.docs[0].ref;
+                    const ref = uS.docs[0].ref;
                     const b = Number(uS.docs[0].data().balance || 0);
-                    await r.update({ balance: b + Number(a) });
+                    await ref.update({ balance: b + Number(amt) });
                 }
             }
-            await db.collection('requests').doc(id).update({ status: s });
+            await db.collection('requests').doc(id).update({ status: status });
         }
-        async function adj(id, t) {
-            const v = Number(document.getElementById('v-'+id).value);
-            const r = db.collection('users').doc(id);
-            const d = await r.get();
+
+        async function editBal(id, type) {
+            const v = Number(document.getElementById('bal-'+id).value);
+            if(!v) return;
+            const ref = db.collection('users').doc(id);
+            const d = await ref.get();
             const b = Number(d.data().balance || 0);
-            await r.update({ balance: t === 'add' ? b + v : b - v });
-            document.getElementById('v-'+id).value = '';
+            await ref.update({ balance: type === 'add' ? b + v : b - v });
+            document.getElementById('bal-'+id).value = '';
         }
-        async function del(id) { if(confirm("Delete?")) await db.collection('users').doc(id).delete(); }
+
+        async function delUsr(id) { if(confirm("Permanently delete this user?")) await db.collection('users').doc(id).delete(); }
+
         function openAdminChat(e) {
-            activeUser = e; document.getElementById('chat-target').innerText = e;
+            activeUserEmail = e;
+            document.getElementById('chat-target').innerText = e;
             document.getElementById('chat-overlay').style.display = 'flex';
             listenToChat(e, 'admin-chat-content', false);
         }
+
         function closeChat() { document.getElementById('chat-overlay').style.display = 'none'; }
+
         async function sendAdminReply() {
-            const m = document.getElementById('admin-msg').value; if(!m) return;
-            await db.collection('chats').add({ userEmail: activeUser, message: m, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-            document.getElementById('admin-msg').value = "";
+            const m = document.getElementById('admin-msg');
+            if(!m.value) return;
+            await db.collection('chats').add({ userEmail: activeUserEmail, message: m.value, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            m.value = "";
+        }
+
+        function filterUsers() {
+            let q = document.getElementById('searchUsr').value.toLowerCase();
+            document.querySelectorAll('.user-item').forEach(c => c.style.display = c.innerText.toLowerCase().includes(q) ? '' : 'none');
         }
     </script>
 </body>
