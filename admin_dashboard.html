@@ -88,15 +88,15 @@
             document.getElementById('request-list').innerHTML = h || '<p>No pending requests.</p>';
         });
 
-        // USERS LIST
+        // USERS LIST (Fixed for "Ghost" Users)
         db.collection('users').onSnapshot(snap => {
             let h = '';
             snap.forEach(doc => {
                 const u = doc.data();
-                const dEmail = u.email || doc.id;
+                const dEmail = u.email || doc.id; // Fallback to Doc ID if email field is missing
                 const safeEmail = dEmail.replace(/[^a-z0-9]/g,'');
                 h += `<div class="card">
-                    <b>${u.fullName || 'User'}</b><br><small>${dEmail}</small><br>
+                    <b>${u.fullName || 'New User'}</b><br><small>${dEmail}</small><br>
                     <b style="color:#3498db">$${Number(u.balance || 0).toLocaleString()}</b>
                     <div style="margin-top:10px; display:flex; gap:5px;">
                         <input type="number" id="amt-${safeEmail}" class="chat-input" placeholder="Amt" style="width:70px">
@@ -108,7 +108,7 @@
             document.getElementById('user-list').innerHTML = h || '<p>No users found.</p>';
         });
 
-        // MESSAGE LIST WITH RED DOT LOGIC
+        // MESSAGES
         db.collection('chats').onSnapshot(snap => {
             let groups = {};
             snap.forEach(doc => {
@@ -130,31 +130,66 @@
         });
     }
 
+    // --- BULLETPROOF APPROVE ---
     async function approve(docId, email, amt, type) {
         if(!confirm("Approve this?")) return;
-        // Trim email to avoid matching errors
-        const q = await db.collection('users').where('email', '==', email.trim()).get();
+        const cleanEmail = email.trim().toLowerCase();
+        
+        // Try searching by email field OR Doc ID
+        let userRef = null;
+        let currentData = null;
+
+        const q = await db.collection('users').where('email', '==', cleanEmail).get();
         if(!q.empty) {
-            const userRef = q.docs[0].ref;
-            const cur = Number(q.docs[0].data().balance || 0);
+            userRef = q.docs[0].ref;
+            currentData = q.docs[0].data();
+        } else {
+            const docRef = db.collection('users').doc(cleanEmail);
+            const docSnap = await docRef.get();
+            if(docSnap.exists) {
+                userRef = docRef;
+                currentData = docSnap.data();
+            }
+        }
+
+        if(userRef) {
+            const cur = Number(currentData.balance || 0);
             const newBal = (type === 'withdrawal') ? cur - Number(amt) : cur + Number(amt);
             await userRef.update({ balance: newBal });
             await db.collection('requests').doc(docId).update({ status: 'successful' });
             alert("Success: Balance Updated");
-        } else { alert("Error: User profile not found for " + email); }
+        } else { 
+            alert("CRITICAL ERROR: User profile not found for " + email + ". Ensure they have a document in the 'users' collection."); 
+        }
     }
 
     async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
 
+    // --- BULLETPROOF BALANCE EDIT ---
     async function editBal(email, mode) {
-        const safeEmail = email.replace(/[^a-z0-9]/g,'');
+        const cleanEmail = email.trim().toLowerCase();
+        const safeEmail = cleanEmail.replace(/[^a-z0-9]/g,'');
         const val = Number(document.getElementById('amt-' + safeEmail).value);
         if(!val) return;
-        const q = await db.collection('users').where('email', '==', email.trim()).get();
+
+        let userRef = null;
+        let currentBal = 0;
+
+        const q = await db.collection('users').where('email', '==', cleanEmail).get();
         if(!q.empty) {
-            const userRef = q.docs[0].ref;
-            const cur = Number(q.docs[0].data().balance || 0);
-            await userRef.update({ balance: mode === 'add' ? cur + val : cur - val });
+            userRef = q.docs[0].ref;
+            currentBal = Number(q.docs[0].data().balance || 0);
+        } else {
+            const docRef = db.collection('users').doc(cleanEmail);
+            const docSnap = await docRef.get();
+            if(docSnap.exists) {
+                userRef = docRef;
+                currentBal = Number(docSnap.data().balance || 0);
+            }
+        }
+
+        if(userRef) {
+            await userRef.update({ balance: mode === 'add' ? currentBal + val : currentBal - val });
             alert("Updated");
             document.getElementById('amt-' + safeEmail).value = '';
         } else { alert("Error: User document not found."); }
