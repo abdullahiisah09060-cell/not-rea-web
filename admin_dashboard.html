@@ -18,8 +18,6 @@
         .card { background: #161a1e; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #2c2f36; }
         .btn { border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .chat-input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #3498db; background: #0b0e11; color: white; outline: none; }
-        
-        /* Chat UI Overlay */
         #chat-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; z-index: 1000; flex-direction: column; }
         #chat-msgs { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         .m-bubble { padding: 10px; border-radius: 10px; max-width: 80%; font-size: 14px; }
@@ -94,37 +92,40 @@
             let h = '';
             snap.forEach(doc => {
                 const u = doc.data();
-                const safeEmail = (u.email || doc.id).replace(/[^a-z0-9]/g,'');
+                const displayEmail = u.email || doc.id;
+                const safeEmail = displayEmail.replace(/[^a-z0-9]/g,'');
                 h += `<div class="card">
-                    <b>${u.fullName || 'User'}</b><br><small>${u.email || doc.id}</small><br>
-                    <b style="color:#3498db">$${u.balance || 0}</b>
+                    <b>${u.fullName || 'User'}</b><br><small>${displayEmail}</small><br>
+                    <b style="color:#3498db">$${Number(u.balance || 0).toLocaleString()}</b>
                     <div style="margin-top:10px; display:flex; gap:5px;">
                         <input type="number" id="amt-${safeEmail}" class="chat-input" placeholder="Amount">
-                        <button class="btn" style="background:#3498db; color:white" onclick="editBal('${u.email}', 'add')">+</button>
-                        <button class="btn" style="background:#888; color:white" onclick="editBal('${u.email}', 'sub')">-</button>
+                        <button class="btn" style="background:#3498db; color:white" onclick="editBal('${displayEmail}', 'add')">+</button>
+                        <button class="btn" style="background:#888; color:white" onclick="editBal('${displayEmail}', 'sub')">-</button>
                     </div>
                 </div>`;
             });
-            document.getElementById('user-list').innerHTML = h;
+            document.getElementById('user-list').innerHTML = h || '<p>No users found.</p>';
         });
 
         // MESSAGE LIST
-        db.collection('chats').orderBy('timestamp', 'desc').onSnapshot(snap => {
+        db.collection('chats').onSnapshot(snap => {
             let groups = {};
-            snap.forEach(doc => { if(!groups[doc.data().userEmail]) groups[doc.data().userEmail] = doc.data(); });
+            snap.forEach(doc => { 
+                let data = doc.data();
+                if(!groups[data.userEmail]) groups[data.userEmail] = data; 
+            });
             let h = '';
             for (let email in groups) {
                 h += `<div class="card" onclick="openChat('${email}')" style="cursor:pointer">
                     <b>${email}</b><br><small>${groups[email].text || 'New message'}</small>
                 </div>`;
             }
-            document.getElementById('admin-chat-area').innerHTML = h;
+            document.getElementById('admin-chat-area').innerHTML = h || '<p>No chats.</p>';
         });
     }
 
     async function approve(docId, email, amt, type) {
         if(!confirm("Approve?")) return;
-        // SEARCHING BY EMAIL FIELD INSTEAD OF DOC NAME
         const q = await db.collection('users').where('email', '==', email).get();
         if(!q.empty) {
             const userRef = q.docs[0].ref;
@@ -133,7 +134,7 @@
             await userRef.update({ balance: newBal });
             await db.collection('requests').doc(docId).update({ status: 'successful' });
             alert("Success!");
-        } else { alert("User not found in database for " + email); }
+        } else { alert("User not found: " + email); }
     }
 
     async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
@@ -146,9 +147,9 @@
         if(!q.empty) {
             const userRef = q.docs[0].ref;
             const cur = Number(q.docs[0].data().balance || 0);
-            const newB = mode === 'add' ? cur + val : cur - val;
-            await userRef.update({ balance: newB });
-            alert("Balance Updated");
+            await userRef.update({ balance: mode === 'add' ? cur + val : cur - val });
+            alert("Updated");
+            document.getElementById('amt-' + safeEmail).value = '';
         }
     }
 
@@ -157,10 +158,12 @@
         activeChatEmail = email;
         document.getElementById('chat-overlay').style.display = 'flex';
         if(chatUnsub) chatUnsub();
-        chatUnsub = db.collection('chats').where('userEmail', '==', email).orderBy('timestamp', 'asc').onSnapshot(snap => {
+        chatUnsub = db.collection('chats').where('userEmail', '==', email).onSnapshot(snap => {
+            let msgs = [];
+            snap.forEach(doc => msgs.push(doc.data()));
+            msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
             let h = '';
-            snap.forEach(doc => {
-                const m = doc.data();
+            msgs.forEach(m => {
                 h += `<div class="m-bubble ${m.sender==='admin'?'m-admin':'m-user'}">${m.text || m.message}</div>`;
             });
             document.getElementById('chat-msgs').innerHTML = h;
