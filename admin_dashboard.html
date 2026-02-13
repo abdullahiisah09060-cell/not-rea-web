@@ -113,7 +113,6 @@
             let groups = {};
             snap.forEach(doc => {
                 let m = doc.data();
-                // Get the most recent message for each user
                 if (!groups[m.userEmail] || (m.timestamp?.seconds > groups[m.userEmail].timestamp?.seconds)) {
                     groups[m.userEmail] = m;
                 }
@@ -133,7 +132,8 @@
 
     async function approve(docId, email, amt, type) {
         if(!confirm("Approve this?")) return;
-        const q = await db.collection('users').where('email', '==', email).get();
+        // Trim email to avoid matching errors
+        const q = await db.collection('users').where('email', '==', email.trim()).get();
         if(!q.empty) {
             const userRef = q.docs[0].ref;
             const cur = Number(q.docs[0].data().balance || 0);
@@ -141,7 +141,7 @@
             await userRef.update({ balance: newBal });
             await db.collection('requests').doc(docId).update({ status: 'successful' });
             alert("Success: Balance Updated");
-        } else { alert("User document not found for: " + email); }
+        } else { alert("Error: User profile not found for " + email); }
     }
 
     async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
@@ -150,14 +150,14 @@
         const safeEmail = email.replace(/[^a-z0-9]/g,'');
         const val = Number(document.getElementById('amt-' + safeEmail).value);
         if(!val) return;
-        const q = await db.collection('users').where('email', '==', email).get();
+        const q = await db.collection('users').where('email', '==', email.trim()).get();
         if(!q.empty) {
             const userRef = q.docs[0].ref;
             const cur = Number(q.docs[0].data().balance || 0);
             await userRef.update({ balance: mode === 'add' ? cur + val : cur - val });
             alert("Updated");
             document.getElementById('amt-' + safeEmail).value = '';
-        }
+        } else { alert("Error: User document not found."); }
     }
 
     let chatUnsub = null;
