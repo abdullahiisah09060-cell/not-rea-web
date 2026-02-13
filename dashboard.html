@@ -12,24 +12,16 @@
         .main-card { background: #1a3a8a; margin: 20px; padding: 40px 20px; border-radius: 45px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); }
         .main-card h1 { font-size: 45px; margin: 10px 0; }
         .btn-row { display: flex; gap: 12px; padding: 0 20px; }
-        .action-btn { flex: 1; padding: 18px; border-radius: 18px; border: none; font-weight: bold; color: white; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        .action-btn { flex: 1; padding: 18px; border-radius: 18px; border: none; font-weight: bold; color: white; font-size: 16px; cursor: pointer; }
         .btn-blue { background: #3498db; } .btn-green { background: #2ecc71; }
-        .btn-orange { background: #f39c12; width: calc(100% - 40px); margin: 15px 20px; padding: 20px; border-radius: 18px; border: none; color: white; font-weight: bold; font-size: 18px; cursor: pointer; }
+        .btn-orange { background: #f39c12; width: calc(100% - 40px); margin: 15px 20px; padding: 20px; border-radius: 18px; border: none; color: white; font-weight: bold; font-size: 18px; }
         .activity-card { background: #0a2463; margin: 20px; padding: 25px; border-radius: 25px; min-height: 150px; }
-        
-        /* Sidebar Styling */
         #sideNav { height: 100%; width: 0; position: fixed; z-index: 100; top: 0; left: 0; background-color: #05163d; overflow-x: hidden; transition: 0.5s; padding-top: 50px; border-right: 1px solid #3498db; }
-        #sideNav a { padding: 15px 25px; text-decoration: none; font-size: 18px; color: #fff; display: block; transition: 0.3s; }
-        #sideNav a:hover { background: #1a3a8a; }
+        #sideNav a { padding: 15px 25px; text-decoration: none; font-size: 18px; color: #fff; display: block; }
         .side-profile { text-align: center; margin-bottom: 30px; }
-        .side-profile img { width: 85px; height: 85px; border-radius: 50%; border: 3px solid #3498db; object-fit: cover; background: #eee; }
+        .side-profile img { width: 85px; height: 85px; border-radius: 50%; border: 3px solid #3498db; object-fit: cover; }
         .closebtn { position: absolute; top: 10px; right: 25px; font-size: 36px; color: white; text-decoration: none; }
-
-        /* Floating Support */
-        .support-float { position: fixed; bottom: 30px; right: 30px; background-color: #3498db; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); text-decoration: none; z-index: 99; transition: transform 0.2s; }
-        .support-float:hover { transform: scale(1.1); }
-        
-        .status-badge { padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .support-float { position: fixed; bottom: 30px; right: 30px; background-color: #3498db; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; z-index: 99; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -69,14 +61,10 @@
 
 <div class="activity-card">
     <h3>Recent Activity</h3>
-    <div id="activity-list">
-        <p style="color: #888;">Checking for transactions...</p>
-    </div>
+    <div id="activity-list"><p style="color: #888;">Checking...</p></div>
 </div>
 
-<a href="support.html" class="support-float">
-    <i class="fa fa-headset"></i>
-</a>
+<a href="support.html" class="support-float"><i class="fa fa-headset"></i></a>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -89,49 +77,42 @@
 
     auth.onAuthStateChanged(user => {
         if (user) {
-            // Load User Profile & Balance using Email as Document ID
-            db.collection('users').doc(user.email).onSnapshot(doc => {
-                if (doc.exists) {
-                    const userData = doc.data();
-                    document.getElementById('user-display-name').innerText = userData.fullName || "User";
-                    document.getElementById('balance-val').innerText = `$${Number(userData.balance || 0).toLocaleString()}`;
-                    
-                    // Profile Picture URL Check
-                    if(userData.profilePic && userData.profilePic !== "") {
-                        document.getElementById('nav-profile-pic').src = userData.profilePic;
-                        document.getElementById('top-profile-pic').src = userData.profilePic;
+            // LOAD USER DATA
+            db.collection('users').where('email', '==', user.email).onSnapshot(snap => {
+                if (!snap.empty) {
+                    const u = snap.docs[0].data();
+                    document.getElementById('user-display-name').innerText = u.fullName || "User";
+                    document.getElementById('balance-val').innerText = `$${Number(u.balance || 0).toLocaleString()}`;
+                    if(u.profilePic) {
+                        document.getElementById('nav-profile-pic').src = u.profilePic;
+                        document.getElementById('top-profile-pic').src = u.profilePic;
                     }
                 }
             });
 
-            // Load Recent Activity (Last 5 requests)
-            db.collection('requests')
-              .where('email', '==', user.email)
-              .orderBy('timestamp', 'desc')
-              .limit(5)
-              .onSnapshot(snap => {
+            // LOAD RECENT ACTIVITY (Manual Sort for Index-Free)
+            db.collection('requests').where('email', '==', user.email).onSnapshot(snap => {
+                let items = [];
+                snap.forEach(d => items.push(d.data()));
+                items.sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                
                 let h = '';
-                snap.forEach(d => {
-                    const r = d.data();
-                    const statusColor = r.status === 'pending' ? '#f39c12' : (r.status === 'successful' ? '#2ecc71' : '#e74c3c');
-                    const displayType = r.type ? r.type.toUpperCase() : "REQUEST";
-                    
-                    h += `<div style="border-bottom:1px solid #1a3a8a; padding:15px 0; display: flex; justify-content: space-between; align-items: center;">
+                items.slice(0, 5).forEach(r => {
+                    const color = r.status === 'pending' ? '#f39c12' : (r.status === 'successful' ? '#2ecc71' : '#e74c3c');
+                    h += `<div style="border-bottom:1px solid #1a3a8a; padding:15px 0; display: flex; justify-content: space-between;">
                         <div>
-                            <span style="display:block; font-weight:bold;">${displayType}</span>
-                            <small style="color:#888;">${r.timestamp ? new Date(r.timestamp.toDate()).toDateString() : 'Just now'}</small>
+                            <b>${(r.type || 'Request').toUpperCase()}</b><br>
+                            <small style="color:#888;">${r.timestamp ? new Date(r.timestamp.toDate()).toDateString() : 'Recent'}</small>
                         </div>
                         <div style="text-align: right;">
-                            <span style="display:block; font-weight:bold; color:white;">$${Number(r.amount).toLocaleString()}</span>
-                            <span style="color:${statusColor}; font-size:12px;">● ${r.status}</span>
+                            <b>$${Number(r.amount).toLocaleString()}</b><br>
+                            <span style="color:${color}; font-size:12px;">● ${r.status}</span>
                         </div>
                     </div>`;
                 });
-                document.getElementById('activity-list').innerHTML = h || '<p style="text-align:center; padding-top:20px; color:#888;">No recent activity yet.</p>';
+                document.getElementById('activity-list').innerHTML = h || '<p>No activity yet.</p>';
             });
-        } else {
-            window.location.href = "index.html";
-        }
+        } else { window.location.href = "index.html"; }
     });
 </script>
 </body>
