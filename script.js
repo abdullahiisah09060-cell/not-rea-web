@@ -1,53 +1,59 @@
-// 1. YOUR FIREBASE CONFIGURATION
-// Replace these with your actual Firebase project details
+// SBA Project Configuration
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDv4-CogG4VR7_NMH3AEEvt2ArWWw6f2m0",
+  authDomain: "sba-grant-us.firebaseapp.com",
+  projectId: "sba-grant-us",
+  storageBucket: "sba-grant-us.firebasestorage.app",
+  messagingSenderId: "458051323380",
+  appId: "1:458051323380:web:1f6ef0823034a3fed7a5a1",
+  measurementId: "G-NEE31ZN4JX"
 };
 
-// Initialize Firebase
+// Initialize Firebase only if it hasn't been initialized already
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 
+// Global variables for all pages to use
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// 2. LOGOUT FUNCTION (Used by everyone)
+// --- GLOBAL UTILITY FUNCTIONS ---
+
+/**
+ * Logout function used in Dashboard and Admin pages
+ */
 function logout() {
     auth.signOut().then(() => {
-        window.location.href = "index.html";
+        window.location.href = 'index.html';
     }).catch((error) => {
         console.error("Logout Error:", error);
+        alert("Error logging out.");
     });
 }
 
-// 3. GLOBAL AUTH CHECK (Optional helper)
-// This ensures that if a user is logged in, their data stays synced
-auth.onAuthStateChanged(user => {
-    if (user) {
-        console.log("Logged in as:", user.email);
-        // You can add global logic here if needed
-    }
-});
-
-// 4. UTILITY: FORMAT CURRENCY
+/**
+ * Money Formatter
+ * Usage: formatMoney(5000) -> "$5,000.00"
+ */
 function formatMoney(amount) {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
-    }).format(amount);
+    }).format(amount || 0);
 }
 
-// 5. PREVENT USER FROM GOING BACK AFTER LOGOUT
-if (window.location.pathname.includes('dashboard.html') || window.location.pathname.includes('admin_dashboard.html')) {
+/**
+ * Global Auth Check
+ * Redirects to login if user session is lost
+ */
+function checkSession() {
     auth.onAuthStateChanged(user => {
         if (!user) {
-            window.location.href = "index.html";
+            window.location.href = 'index.html';
         }
     });
 }
+
+// Optional: Enable Analytics if you need it
+// firebase.analytics();
