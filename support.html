@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBA Support</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SBA | Support</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        /* This makes the background dark but keeps the chat box small */
+        /* Prevents full-screen stretching */
         body { 
             background: #001a41; 
             margin: 0; 
@@ -17,160 +17,193 @@
             align-items: center; 
             height: 100vh; 
             font-family: sans-serif;
+            overflow: hidden;
         }
 
-        /* The Chat Container (Not Full Screen) */
-        .chat-container {
-            width: 90%;
-            max-width: 400px; /* Limits width on big phones/PC */
-            height: 80vh;    /* Limits height so it doesn't touch top/bottom */
+        /* The Compact Chat Box */
+        .chat-window {
+            width: 92%;
+            max-width: 450px;
+            height: 85vh;
             background: #f0f2f5;
-            border-radius: 20px;
+            border-radius: 25px;
             display: flex;
             flex-direction: column;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
             overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
 
-        .header { 
-            padding: 15px; 
-            background: #002d72; 
-            color: white; 
-            display: flex; 
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .header a { color: white; text-decoration: none; font-size: 20px; }
-
-        #chat-box { 
-            flex: 1; 
-            padding: 15px; 
-            overflow-y: auto; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 10px; 
-        }
-
-        /* Chat Bubbles */
-        .msg { 
-            max-width: 80%; 
-            padding: 10px 14px; 
-            font-size: 14px; 
-            border-radius: 15px; 
-            line-height: 1.4;
-        }
-        .received { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .sent { background: #002d72; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        
-        .time { font-size: 10px; opacity: 0.5; display: block; margin-top: 5px; text-align: right; }
-
-        .input-area { 
-            background: white; 
-            padding: 12px; 
-            display: flex; 
-            gap: 8px; 
-            border-top: 1px solid #ddd;
-        }
-        
-        input { 
-            flex: 1; 
-            border: 1px solid #ddd; 
-            padding: 10px 15px; 
-            border-radius: 20px; 
-            outline: none; 
-        }
-
-        button { 
-            background: #002d72; 
-            border: none; 
-            color: white; 
-            width: 40px; 
-            height: 40px; 
-            border-radius: 50%; 
-            cursor: pointer;
+        .chat-header {
+            background: #002d72;
+            padding: 15px;
+            color: white;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
+        }
+
+        .chat-header a { color: white; text-decoration: none; font-size: 20px; font-weight: bold; }
+
+        /* Messages Area */
+        #chat-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .msg {
+            max-width: 80%;
+            padding: 10px 14px;
+            font-size: 14px;
+            border-radius: 18px;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .received {
+            background: white;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .sent {
+            background: #002d72;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .time {
+            font-size: 10px;
+            opacity: 0.5;
+            display: block;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        /* Input Bar */
+        .input-bar {
+            background: white;
+            padding: 12px 15px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        input {
+            flex: 1;
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            border-radius: 25px;
+            outline: none;
+            background: #f8f9fa;
+        }
+
+        button {
+            background: #002d72;
+            border: none;
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
 
-<div class="chat-container">
-    <div class="header">
+<div class="chat-window">
+    <div class="chat-header">
         <a href="dashboard.html">✕</a>
-        <span>SBA Support Agent</span>
-        <div style="width:20px;"></div>
+        <span>SBA Live Support</span>
+        <div style="width: 20px;"></div>
     </div>
 
-    <div id="chat-box">
+    <div id="chat-content">
         </div>
 
-    <div class="input-area">
-        <input type="text" id="msg-input" placeholder="Type a message...">
-        <button onclick="sendMsg()">➤</button>
+    <div class="input-bar">
+        <input type="text" id="user-msg" placeholder="Type a message...">
+        <button onclick="sendMessage()">➤</button>
     </div>
 </div>
 
 <script src="script.js"></script>
 <script>
-    const chatBox = document.getElementById('chat-box');
-    const msgInput = document.getElementById('msg-input');
-    
-    // 1. Fixed Welcome Message
-    const welcomeHTML = `
+    const chatContent = document.getElementById('chat-content');
+    const userMsgInput = document.getElementById('user-msg');
+
+    // 1. Welcome Message
+    const welcomeMessage = `
         <div class="msg received">
-            Hello! 👋 Welcome to SBA Support. We are here to help you with your grants and account.
-            <span class="time">System</span>
+            Hello! 👋 Welcome to SBA Customer Support. Our agents are ready to help you with your grant or account questions.
+            <span class="time">Official Agent</span>
         </div>
     `;
 
     auth.onAuthStateChanged(user => {
         if (user) {
-            // 2. Fetch all previous chats
+            // 2. Load ALL chat history for this specific user
             db.collection('chats')
-              .where('userEmail', '==', user.email)
-              .orderBy('timestamp', 'asc')
-              .onSnapshot(snap => {
-                  chatBox.innerHTML = welcomeHTML; // Keep welcome at top
+                .where('userEmail', '==', user.email)
+                .orderBy('timestamp', 'asc')
+                .onSnapshot(snap => {
+                    // Always show the welcome message first
+                    chatContent.innerHTML = welcomeMessage;
 
-                  snap.forEach(doc => {
-                      const m = doc.data();
-                      const isMe = m.sender === 'user';
-                      const div = document.createElement('div');
-                      div.className = `msg ${isMe ? 'sent' : 'received'}`;
-                      
-                      const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...';
-                      
-                      div.innerHTML = `
-                          ${m.text || m.message}
-                          <span class="time">${time}</span>
-                      `;
-                      chatBox.appendChild(div);
-                  });
-                  chatBox.scrollTop = chatBox.scrollHeight;
-              });
+                    snap.forEach(doc => {
+                        const data = doc.data();
+                        const isSentByUser = data.sender === 'user';
+                        const msgDiv = document.createElement('div');
+                        
+                        msgDiv.className = `msg ${isSentByUser ? 'sent' : 'received'}`;
+                        
+                        const timeStamp = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...';
+
+                        msgDiv.innerHTML = `
+                            ${data.text || data.message}
+                            <span class="time">${timeStamp}</span>
+                        `;
+                        chatContent.appendChild(msgDiv);
+                    });
+
+                    // Auto-scroll to the very last message
+                    chatContent.scrollTop = chatContent.scrollHeight;
+                });
         } else {
             window.location.href = "index.html";
         }
     });
 
-    async function sendMsg() {
-        const text = msgInput.value.trim();
+    async function sendMessage() {
+        const text = userMsgInput.value.trim();
         const user = auth.currentUser;
         if (!text || !user) return;
 
-        msgInput.value = '';
-        await db.collection('chats').add({
-            userEmail: user.email,
-            text: text,
-            sender: 'user',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        userMsgInput.value = ''; // Clear input immediately
+        
+        try {
+            await db.collection('chats').add({
+                userEmail: user.email,
+                text: text,
+                sender: 'user',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (e) {
+            console.error("Message failed:", e);
+        }
     }
 
-    msgInput.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMsg(); });
+    // Send message on Enter key
+    userMsgInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") sendMessage();
+    });
 </script>
 
 </body>
