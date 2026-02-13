@@ -2,57 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SBA Support</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #001a41; margin: 0; height: 100vh; display: flex; flex-direction: column; font-family: sans-serif; }
-        .header { padding: 15px; background: #002d72; color: white; display: flex; align-items: center; gap: 15px; }
-        #chat-box { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f0f2f5; }
-        .msg { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; }
-        .received { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .sent { background: #002d72; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .input-area { background: white; padding: 10px; display: flex; gap: 10px; border-top: 1px solid #ddd; }
-        input { flex: 1; border: 1px solid #ddd; padding: 12px; border-radius: 25px; outline: none; }
-        button { background: #002d72; border: none; color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; }
+        body { background: #001a41; margin: 0; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; }
+        .chat-container { width: 95%; max-width: 400px; height: 90vh; background: #f0f2f5; margin-top: 20px; border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; }
+        .head { background: #002d72; color: white; padding: 15px; font-weight: bold; }
+        #box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px; border-radius: 10px; font-size: 14px; max-width: 80%; }
+        .rec { background: white; align-self: flex-start; }
+        .sen { background: #002d72; color: white; align-self: flex-end; }
+        .input-box { background: white; padding: 10px; display: flex; gap: 5px; }
+        input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #ddd; outline: none; }
     </style>
 </head>
 <body>
-    <div class="header"><a href="dashboard.html" style="color:white; text-decoration:none; font-size:24px;">‹</a> <b>SBA Live Support</b></div>
-    <div id="chat-box"></div>
-    <div class="input-area">
-        <input type="text" id="msg-input" placeholder="How can we help you?">
-        <button onclick="sendMsg()">➤</button>
+    <div class="chat-container">
+        <div class="head">SBA Support Center</div>
+        <div id="box"></div>
+        <div class="input-box">
+            <input type="text" id="in" placeholder="How can we help?">
+            <button onclick="send()" style="border:none; background:none; font-size:20px;">➤</button>
+        </div>
     </div>
     <script src="script.js"></script>
     <script>
-        const chatBox = document.getElementById('chat-box');
-        const welcomeMsg = "Hello! 👋 Welcome to SBA Support Center. How can we help you with your grant application or account balance today?";
-
+        const welcome = "Welcome to SBA Support! 👋 Our team is online. How can we help you with your application or balance today?";
+        
         auth.onAuthStateChanged(user => {
-            if (user) {
+            if(user) {
                 db.collection('chats').where('userEmail', '==', user.email).orderBy('timestamp', 'asc').onSnapshot(snap => {
-                    chatBox.innerHTML = `<div class="msg received">${welcomeMsg}</div>`;
+                    let h = `<div class="msg rec">${welcome}</div>`;
                     snap.forEach(doc => {
                         const m = doc.data();
-                        const div = document.createElement('div');
-                        div.className = `msg ${m.sender === 'user' ? 'sent' : 'received'}`;
-                        div.innerText = m.text || m.message;
-                        chatBox.appendChild(div);
+                        h += `<div class="msg ${m.sender==='user'?'sen':'rec'}">${m.text || m.message}</div>`;
                     });
-                    chatBox.scrollTop = chatBox.scrollHeight;
+                    document.getElementById('box').innerHTML = h;
+                    document.getElementById('box').scrollTop = 99999;
                 });
-            } else { window.location.href = "index.html"; }
+            } else { window.location.href="index.html"; }
         });
 
-        async function sendMsg() {
-            const val = document.getElementById('msg-input').value;
+        async function send() {
+            const val = document.getElementById('in').value;
             if(!val) return;
-            document.getElementById('msg-input').value = '';
+            document.getElementById('in').value = '';
             await db.collection('chats').add({
-                userEmail: auth.currentUser.email, text: val, sender: 'user', timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                userEmail: auth.currentUser.email,
+                text: val,
+                sender: 'user',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
     </script>
