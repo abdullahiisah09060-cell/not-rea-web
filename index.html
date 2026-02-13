@@ -7,7 +7,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    
     <style>
         body { background: #002d72; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
         .card { width: 90%; max-width: 400px; background: white; border-radius: 30px; padding: 40px 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-align: center; }
@@ -25,45 +24,39 @@
     </style>
 </head>
 <body>
-
     <div class="card">
         <div class="app-title">SBA GRANT PORTAL</div>
-        
         <div class="toggle-box">
             <button id="btn-login" class="tgl-btn active" onclick="showTab('login')">Log In</button>
             <button id="btn-signup" class="tgl-btn inactive" onclick="showTab('signup')">Sign Up</button>
         </div>
-
         <div id="login-section">
             <input type="email" id="l-email" placeholder="Email Address">
             <input type="password" id="l-pass" placeholder="Password">
             <button class="btn-main" id="login-btn" onclick="login()">Log In</button>
         </div>
-
         <div id="signup-section" style="display:none;">
             <input type="text" id="s-name" placeholder="Full Name">
             <input type="email" id="s-email" placeholder="Email Address">
             <input type="password" id="s-pass" placeholder="Password">
-            
             <div class="footer-links">
                 <input type="checkbox" id="terms-check">
                 <label for="terms-check">Agree to our <a href="terms.html">Terms & Conditions</a></label>
             </div>
-            
             <button class="btn-main" id="reg-btn" onclick="signup()">Sign Up</button>
         </div>
     </div>
 
     <script src="script.js"></script>
-
     <script>
-        // --- MULTI-ADMIN REDIRECT LOGIC ---
         auth.onAuthStateChanged(user => {
             if (user) {
-                const admin1 = "abdullahiisah09060@gmail.com";
-                const admin2 = "battlefieldbusinesscentre@gmail.com";
-                
-                if (user.email === admin1 || user.email === admin2) {
+                const admins = [
+                    "abdullahiisah09060@gmail.com",
+                    "battlefieldbusinesscentre@gmail.com",
+                    "mskatrik880@gmail.com"
+                ];
+                if (admins.includes(user.email.toLowerCase())) {
                     window.location.href = 'admin_dashboard.html';
                 } else {
                     window.location.href = 'dashboard.html';
@@ -71,22 +64,13 @@
             }
         });
 
-        // --- UI TAB TOGGLE ---
         function showTab(type) {
-            const loginSec = document.getElementById('login-section');
-            const signupSec = document.getElementById('signup-section');
-            const loginBtn = document.getElementById('btn-login');
-            const signupBtn = document.getElementById('btn-signup');
-            if (type === 'login') {
-                loginSec.style.display = 'block'; signupSec.style.display = 'none';
-                loginBtn.className = 'tgl-btn active'; signupBtn.className = 'tgl-btn inactive';
-            } else {
-                loginSec.style.display = 'none'; signupSec.style.display = 'block';
-                loginBtn.className = 'tgl-btn inactive'; signupBtn.className = 'tgl-btn active';
-            }
+            document.getElementById('login-section').style.display = type === 'login' ? 'block' : 'none';
+            document.getElementById('signup-section').style.display = type === 'signup' ? 'block' : 'none';
+            document.getElementById('btn-login').className = type === 'login' ? 'tgl-btn active' : 'tgl-btn inactive';
+            document.getElementById('btn-signup').className = type === 'signup' ? 'tgl-btn active' : 'tgl-btn inactive';
         }
 
-        // --- SIGNUP PROCESS ---
         async function signup() {
             const name = document.getElementById('s-name').value;
             const email = document.getElementById('s-email').value.trim().toLowerCase();
@@ -94,51 +78,27 @@
             const agree = document.getElementById('terms-check').checked;
             const btn = document.getElementById('reg-btn');
 
-            if (!name || !email || !pass) return alert("Please fill all fields");
-            if (!agree) return alert("Please agree to the terms");
-
-            btn.disabled = true;
-            btn.innerText = "Creating Account...";
+            if (!name || !email || !pass || !agree) return alert("Fill all fields and agree to terms");
+            btn.disabled = true; btn.innerText = "Creating...";
 
             try {
                 const cred = await auth.createUserWithEmailAndPassword(email, pass);
-                
-                // Using email as Document ID for easy retrieval in Admin Panel
                 await db.collection('users').doc(email).set({
-                    fullName: name,
-                    email: email,
-                    uid: cred.user.uid,
-                    balance: 0,
-                    profilePic: "",
-                    status: "Active",
+                    fullName: name, email: email, uid: cred.user.uid, balance: 0, status: "Active",
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert("Registration Successful!");
-            } catch (err) {
-                alert(err.message);
-                btn.disabled = false;
-                btn.innerText = "Sign Up";
-            }
+                alert("Success!");
+            } catch (err) { alert(err.message); btn.disabled = false; btn.innerText = "Sign Up"; }
         }
 
-        // --- LOGIN PROCESS ---
         async function login() {
             const email = document.getElementById('l-email').value.trim().toLowerCase();
             const pass = document.getElementById('l-pass').value;
             const btn = document.getElementById('login-btn');
-
             if (!email || !pass) return alert("Fill all fields");
-            
-            btn.disabled = true;
-            btn.innerText = "Verifying...";
-
-            try {
-                await auth.signInWithEmailAndPassword(email, pass);
-            } catch (err) {
-                alert(err.message);
-                btn.disabled = false;
-                btn.innerText = "Log In";
-            }
+            btn.disabled = true; btn.innerText = "Verifying...";
+            try { await auth.signInWithEmailAndPassword(email, pass); } 
+            catch (err) { alert(err.message); btn.disabled = false; btn.innerText = "Log In"; }
         }
     </script>
 </body>
