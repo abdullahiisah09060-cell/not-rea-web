@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>SBA Support</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -10,108 +10,144 @@
     <script src="script.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #002366; margin: 0; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* Fixed Header */
-        .header { background: #002366; padding: 20px; display: flex; align-items: center; gap: 15px; color: white; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .back-btn { font-size: 22px; cursor: pointer; color: white; text-decoration: none; }
-        .header-info h2 { margin: 0; font-size: 18px; }
-        .header-info p { margin: 0; font-size: 12px; color: #2ecc71; }
+        /* This part ensures the app takes exactly the screen height and nothing more */
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background: #002366; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
 
-        /* Chat Window */
-        .chat-container { flex: 1; background: #f4f7f9; border-top-left-radius: 30px; border-top-right-radius: 30px; display: flex; flex-direction: column; overflow: hidden; }
-        #box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Full viewport height */
+            height: -webkit-fill-available; /* Fix for mobile Safari */
+        }
+
+        /* Fixed Header */
+        .header { 
+            background: #002366; 
+            padding: 15px 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            color: white; 
+            flex-shrink: 0; /* Prevents header from shrinking */
+        }
+        .back-btn { font-size: 20px; color: white; text-decoration: none; padding: 5px; }
+
+        /* Chat Area - This grows to fill space */
+        .chat-area { 
+            flex: 1; 
+            background: #f4f7f9; 
+            border-top-left-radius: 25px; 
+            border-top-right-radius: 25px; 
+            overflow-y: auto; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px;
+            -webkit-overflow-scrolling: touch; /* Smooth scroll for iOS */
+        }
 
         /* Message Bubbles */
-        .msg { padding: 12px 16px; border-radius: 18px; font-size: 14px; max-width: 80%; line-height: 1.5; position: relative; }
-        .rec { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .sen { background: #002366; color: white; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 10px rgba(0,35,102,0.2); }
-        
-        /* Footer Input */
-        .footer { background: white; padding: 15px; display: flex; gap: 10px; align-items: center; border-top: 1px solid #eee; }
-        .input-box { flex: 1; background: #f0f2f5; border: none; padding: 12px 20px; border-radius: 25px; outline: none; font-size: 14px; }
-        .send-btn { background: #002366; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-        .send-btn:active { transform: scale(0.9); }
+        .msg { padding: 12px 16px; border-radius: 18px; font-size: 14px; max-width: 80%; line-height: 1.4; word-wrap: break-word; }
+        .rec { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .sen { background: #002366; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+
+        /* Footer - Forced to stay at bottom */
+        .footer { 
+            background: white; 
+            padding: 10px 15px; 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; 
+            flex-shrink: 0; 
+            padding-bottom: env(safe-area-inset-bottom, 15px); /* Fix for iPhone Notch */
+        }
+        .input-box { 
+            flex: 1; 
+            background: #f0f2f5; 
+            border: none; 
+            padding: 12px 18px; 
+            border-radius: 25px; 
+            outline: none; 
+            font-size: 16px; /* 16px prevents auto-zoom on iPhone */
+        }
+        .send-btn { 
+            background: #002366; 
+            color: white; 
+            border: none; 
+            width: 42px; 
+            height: 42px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
     </style>
 </head>
 <body>
 
+<div class="main-wrapper">
     <div class="header">
         <a href="dashboard.html" class="back-btn"><i class="fa fa-chevron-left"></i></a>
-        <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-            <i class="fa fa-headset"></i>
-        </div>
         <div class="header-info">
-            <h2>SBA Support</h2>
-            <p><i class="fa fa-circle" style="font-size: 8px;"></i> Online</p>
+            <h2 style="margin:0; font-size:17px;">Support Agent</h2>
+            <small style="color:#2ecc71">● Online</small>
         </div>
     </div>
 
-    <div class="chat-container">
-        <div id="box">
-            </div>
-
-        <div class="footer">
-            <input type="text" id="in" class="input-box" placeholder="Write a message...">
-            <button class="send-btn" onclick="send()"><i class="fa fa-paper-plane"></i></button>
+    <div class="chat-area" id="box">
         </div>
+
+    <div class="footer">
+        <input type="text" id="in" class="input-box" placeholder="Message...">
+        <button class="send-btn" onclick="send()"><i class="fa fa-paper-plane"></i></button>
     </div>
+</div>
 
-    <script>
-        const box = document.getElementById('box');
-        const welcome = "Hello! 👋 Welcome to SBA Support. Tell us about your grant application or any issues you are having.";
+<script>
+    const box = document.getElementById('box');
+    const welcome = "Hello! 👋 How can we help you today?";
 
-        auth.onAuthStateChanged(user => {
-            if(user) {
-                // REAL-TIME LISTENER
-                db.collection('chats').where('userEmail', '==', user.email.toLowerCase()).onSnapshot(snap => {
-                    let msgs = [];
-                    snap.forEach(doc => msgs.push(doc.data()));
-                    
-                    // Sort by time
-                    msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-                    
-                    let html = `<div class="msg rec">${welcome}</div>`;
-                    msgs.forEach(m => {
-                        const isUser = m.sender === 'user';
-                        html += `<div class="msg ${isUser ? 'sen' : 'rec'}">${m.text || m.message}</div>`;
-                    });
-                    
-                    box.innerHTML = html;
-                    // Auto scroll to bottom
-                    box.scrollTop = box.scrollHeight;
+    auth.onAuthStateChanged(user => {
+        if(user) {
+            db.collection('chats').where('userEmail', '==', user.email.toLowerCase()).onSnapshot(snap => {
+                let msgs = [];
+                snap.forEach(doc => msgs.push(doc.data()));
+                msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+                
+                let html = `<div class="msg rec">${welcome}</div>`;
+                msgs.forEach(m => {
+                    html += `<div class="msg ${m.sender==='user'?'sen':'rec'}">${m.text || m.message}</div>`;
                 });
-            } else { 
-                window.location.href="index.html"; 
-            }
-        });
+                box.innerHTML = html;
+                box.scrollTop = box.scrollHeight;
+            });
+        } else { window.location.href="index.html"; }
+    });
 
-        async function send() {
-            const inputField = document.getElementById('in');
-            const val = inputField.value.trim();
-            if(!val) return;
-            
-            inputField.value = ''; // Clear immediately for speed
-            
-            try {
-                await db.collection('chats').add({
-                    userEmail: auth.currentUser.email.toLowerCase(),
-                    text: val,
-                    sender: 'user',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (err) {
-                alert("Message failed to send. Check connection.");
-                inputField.value = val; // Put text back if failed
-            }
-        }
-
-        // Allow sending with "Enter" key
-        document.getElementById('in').addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                send();
-            }
+    async function send() {
+        const input = document.getElementById('in');
+        const val = input.value.trim();
+        if(!val) return;
+        input.value = '';
+        await db.collection('chats').add({
+            userEmail: auth.currentUser.email.toLowerCase(),
+            text: val,
+            sender: 'user',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-    </script>
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // Handle Enter key
+    document.getElementById('in').addEventListener("keypress", (e) => { if(e.key === "Enter") send(); });
+</script>
+
 </body>
 </html>
