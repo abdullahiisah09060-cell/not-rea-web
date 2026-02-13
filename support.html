@@ -8,67 +8,179 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        body { background: #002d72; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .header { padding: 15px; background: #001a41; color: white; display: flex; align-items: center; gap: 15px; font-weight: bold; flex-shrink: 0; }
-        .back-btn { text-decoration: none; color: white; font-size: 20px; }
-        #chat-box { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f0f2f5; }
-        .msg { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; }
-        .received { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .sent { background: #002d72; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .time { font-size: 10px; opacity: 0.5; display: block; margin-top: 4px; text-align: right; }
-        .input-area { background: white; padding: 10px; display: flex; gap: 8px; align-items: center; border-top: 1px solid #ddd; flex-shrink: 0; }
-        input { flex: 1; border: 1px solid #ccc; padding: 12px; border-radius: 25px; outline: none; font-size: 15px; }
-        button { background: #002d72; border: none; color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        /* This part stops the page from stretching past the phone screen */
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background: #001a41; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        body { display: flex; flex-direction: column; }
+
+        .header { 
+            padding: 15px; 
+            background: #001a41; 
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px;
+            flex-shrink: 0; /* Keeps header size fixed */
+        }
+        .back-btn { text-decoration: none; color: white; font-size: 24px; }
+        
+        /* The Chat Area */
+        #chat-box { 
+            flex: 1; 
+            padding: 15px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            background: #f0f2f5; /* Light background so messages pop */
+        }
+
+        .msg { 
+            max-width: 80%; 
+            padding: 10px 14px; 
+            font-size: 14px; 
+            line-height: 1.4; 
+            border-radius: 18px;
+            position: relative;
+        }
+        .received { 
+            background: white; 
+            color: #333; 
+            align-self: flex-start; 
+            border-bottom-left-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .sent { 
+            background: #002d72; 
+            color: white; 
+            align-self: flex-end; 
+            border-bottom-right-radius: 2px;
+        }
+        .time { font-size: 10px; opacity: 0.5; margin-top: 4px; display: block; text-align: right; }
+
+        /* Input Area pinned at bottom */
+        .input-area { 
+            background: white; 
+            padding: 10px 15px; 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; 
+            border-top: 1px solid #ddd;
+            padding-bottom: 25px; /* Extra space for bottom notch on iPhones */
+            flex-shrink: 0;
+        }
+        input { 
+            flex: 1; 
+            border: 1px solid #ddd; 
+            padding: 12px 18px; 
+            border-radius: 25px; 
+            outline: none; 
+            font-size: 15px;
+            background: #f8f9fa;
+        }
+        button { 
+            background: #002d72; 
+            border: none; 
+            color: white; 
+            width: 42px; 
+            height: 42px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+
     <div class="header">
-        <a href="dashboard.html" class="back-btn">←</a>
-        <span>SBA Support Agent</span>
+        <a href="dashboard.html" class="back-btn">‹</a>
+        <div style="font-weight: bold;">SBA Support</div>
     </div>
-    <div id="chat-box"></div>
+
+    <div id="chat-box">
+        </div>
+
     <div class="input-area">
-        <input type="text" id="msg-input" placeholder="Type a message...">
-        <button onclick="sendMsg()"><svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+        <input type="text" id="msg-input" placeholder="How can we help?">
+        <button onclick="sendMsg()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
     </div>
 
     <script src="script.js"></script>
     <script>
         const chatBox = document.getElementById('chat-box');
         const msgInput = document.getElementById('msg-input');
-        const welcome = "Welcome to SBA Support! How can we help you with your account or grant today?";
+        
+        // Your Welcome Message
+        const welcomeText = "Welcome to SBA Support! 💼 Our agents are online to assist you with your grant applications and account balance. How can we help you today?";
 
         auth.onAuthStateChanged(user => {
             if (user) {
-                db.collection('chats').where('userEmail', '==', user.email).orderBy('timestamp', 'asc')
-                .onSnapshot(snap => {
-                    chatBox.innerHTML = `<div class="msg received">${welcome}<span class="time">System</span></div>`;
-                    snap.forEach(doc => {
-                        const m = doc.data();
-                        const type = m.sender === 'admin' ? 'received' : 'sent';
-                        const div = document.createElement('div');
-                        div.className = `msg ${type}`;
-                        div.innerHTML = `${m.text || m.message} <span class="time">${m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '...'}</span>`;
-                        chatBox.appendChild(div);
-                    });
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                });
-            } else { window.location.href = "index.html"; }
+                db.collection('chats')
+                  .where('userEmail', '==', user.email)
+                  .orderBy('timestamp', 'asc')
+                  .onSnapshot(snap => {
+                      // Always start with the welcome message
+                      chatBox.innerHTML = `
+                        <div class="msg received">
+                            ${welcomeText}
+                            <span class="time">System Agent</span>
+                        </div>
+                      `;
+
+                      snap.forEach(doc => {
+                          const m = doc.data();
+                          const isSentByMe = m.sender === 'user';
+                          const div = document.createElement('div');
+                          div.className = `msg ${isSentByMe ? 'sent' : 'received'}`;
+                          
+                          // Format time
+                          const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...';
+                          
+                          div.innerHTML = `
+                              ${m.text || m.message}
+                              <span class="time">${time}</span>
+                          `;
+                          chatBox.appendChild(div);
+                      });
+                      
+                      // Auto-scroll to latest message
+                      chatBox.scrollTop = chatBox.scrollHeight;
+                  });
+            } else {
+                window.location.href = "index.html";
+            }
         });
 
         async function sendMsg() {
-            const text = msgInput.value.trim();
+            const val = msgInput.value.trim();
             const user = auth.currentUser;
-            if (!text || !user) return;
-            msgInput.value = '';
+            if (!val || !user) return;
+
+            msgInput.value = ''; // Clear immediately
+            
             await db.collection('chats').add({
                 userEmail: user.email,
-                text: text,
+                text: val,
                 sender: 'user',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
-        msgInput.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMsg(); });
+
+        // Send on Enter key
+        msgInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendMsg();
+        });
     </script>
 </body>
 </html>
