@@ -138,41 +138,32 @@
         const cleanEmail = email.trim().toLowerCase();
         
         try {
-            // STRONGER SEARCH: Check by Document ID first, then by field
+            // First find the user document
             let userRef = db.collection('users').doc(cleanEmail);
             let docSnap = await userRef.get();
 
             if (!docSnap.exists) {
+                // Fallback search
                 const query = await db.collection('users').where('email', '==', cleanEmail).get();
-                if (!query.empty) {
-                    userRef = query.docs[0].ref;
-                    docSnap = query.docs[0];
-                }
+                if (!query.empty) { userRef = query.docs[0].ref; docSnap = query.docs[0]; }
             }
 
             if(docSnap.exists) {
                 const currentBal = Number(docSnap.data().balance || 0);
-                let newBal;
+                let newBal = type.toLowerCase().includes('withdraw') ? currentBal - Number(amt) : currentBal + Number(amt);
                 
-                // Logic: If it's a withdrawal, subtract. If it's a deposit or Grant, add.
-                if (type.toLowerCase().includes('withdraw')) {
-                    newBal = currentBal - Number(amt);
-                } else {
-                    newBal = currentBal + Number(amt);
-                }
-                
+                // Update User Balance
                 await userRef.update({ balance: newBal });
+                // Mark Request as Successful
                 await db.collection('requests').doc(docId).update({ status: 'successful' });
-                alert("Success: Balance Updated!");
+                alert("Success: User balance updated to $" + newBal.toLocaleString());
             } else {
-                alert("User document not found for: " + cleanEmail);
+                alert("Error: User document not found in Firestore.");
             }
-        } catch (e) {
-            alert("Error: " + e.message);
-        }
+        } catch (e) { alert("Error: " + e.message); }
     }
 
-    async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
+    async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); alert("Request Declined"); }
 
     async function editBal(email, mode) {
         const cleanEmail = email.trim().toLowerCase();
@@ -182,11 +173,6 @@
 
         let userRef = db.collection('users').doc(cleanEmail);
         let docSnap = await userRef.get();
-
-        if (!docSnap.exists) {
-            const query = await db.collection('users').where('email', '==', cleanEmail).get();
-            if (!query.empty) { userRef = query.docs[0].ref; docSnap = query.docs[0]; }
-        }
 
         if(docSnap.exists) {
             const cur = Number(docSnap.data().balance || 0);
