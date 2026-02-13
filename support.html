@@ -2,36 +2,47 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SBA Support</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
-        /* This part stops the page from stretching past the phone screen */
-        html, body { 
-            height: 100%; 
-            margin: 0; 
-            padding: 0; 
-            overflow: hidden; 
+        /* This makes the background dark but keeps the chat box small */
+        body { 
             background: #001a41; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            font-family: sans-serif;
         }
-        
-        body { display: flex; flex-direction: column; }
+
+        /* The Chat Container (Not Full Screen) */
+        .chat-container {
+            width: 90%;
+            max-width: 400px; /* Limits width on big phones/PC */
+            height: 80vh;    /* Limits height so it doesn't touch top/bottom */
+            background: #f0f2f5;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
 
         .header { 
             padding: 15px; 
-            background: #001a41; 
+            background: #002d72; 
             color: white; 
             display: flex; 
-            align-items: center; 
-            gap: 15px;
-            flex-shrink: 0; /* Keeps header size fixed */
+            justify-content: space-between;
+            align-items: center;
         }
-        .back-btn { text-decoration: none; color: white; font-size: 24px; }
         
-        /* The Chat Area */
+        .header a { color: white; text-decoration: none; font-size: 20px; }
+
         #chat-box { 
             flex: 1; 
             padding: 15px; 
@@ -39,148 +50,128 @@
             display: flex; 
             flex-direction: column; 
             gap: 10px; 
-            background: #f0f2f5; /* Light background so messages pop */
         }
 
+        /* Chat Bubbles */
         .msg { 
             max-width: 80%; 
             padding: 10px 14px; 
             font-size: 14px; 
-            line-height: 1.4; 
-            border-radius: 18px;
-            position: relative;
+            border-radius: 15px; 
+            line-height: 1.4;
         }
-        .received { 
-            background: white; 
-            color: #333; 
-            align-self: flex-start; 
-            border-bottom-left-radius: 2px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        .sent { 
-            background: #002d72; 
-            color: white; 
-            align-self: flex-end; 
-            border-bottom-right-radius: 2px;
-        }
-        .time { font-size: 10px; opacity: 0.5; margin-top: 4px; display: block; text-align: right; }
+        .received { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .sent { background: #002d72; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        
+        .time { font-size: 10px; opacity: 0.5; display: block; margin-top: 5px; text-align: right; }
 
-        /* Input Area pinned at bottom */
         .input-area { 
             background: white; 
-            padding: 10px 15px; 
+            padding: 12px; 
             display: flex; 
-            gap: 10px; 
-            align-items: center; 
+            gap: 8px; 
             border-top: 1px solid #ddd;
-            padding-bottom: 25px; /* Extra space for bottom notch on iPhones */
-            flex-shrink: 0;
         }
+        
         input { 
             flex: 1; 
             border: 1px solid #ddd; 
-            padding: 12px 18px; 
-            border-radius: 25px; 
+            padding: 10px 15px; 
+            border-radius: 20px; 
             outline: none; 
-            font-size: 15px;
-            background: #f8f9fa;
         }
+
         button { 
             background: #002d72; 
             border: none; 
             color: white; 
-            width: 42px; 
-            height: 42px; 
+            width: 40px; 
+            height: 40px; 
             border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
 <body>
 
+<div class="chat-container">
     <div class="header">
-        <a href="dashboard.html" class="back-btn">‹</a>
-        <div style="font-weight: bold;">SBA Support</div>
+        <a href="dashboard.html">✕</a>
+        <span>SBA Support Agent</span>
+        <div style="width:20px;"></div>
     </div>
 
     <div id="chat-box">
         </div>
 
     <div class="input-area">
-        <input type="text" id="msg-input" placeholder="How can we help?">
-        <button onclick="sendMsg()">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-        </button>
+        <input type="text" id="msg-input" placeholder="Type a message...">
+        <button onclick="sendMsg()">➤</button>
     </div>
+</div>
 
-    <script src="script.js"></script>
-    <script>
-        const chatBox = document.getElementById('chat-box');
-        const msgInput = document.getElementById('msg-input');
-        
-        // Your Welcome Message
-        const welcomeText = "Welcome to SBA Support! 💼 Our agents are online to assist you with your grant applications and account balance. How can we help you today?";
+<script src="script.js"></script>
+<script>
+    const chatBox = document.getElementById('chat-box');
+    const msgInput = document.getElementById('msg-input');
+    
+    // 1. Fixed Welcome Message
+    const welcomeHTML = `
+        <div class="msg received">
+            Hello! 👋 Welcome to SBA Support. We are here to help you with your grants and account.
+            <span class="time">System</span>
+        </div>
+    `;
 
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                db.collection('chats')
-                  .where('userEmail', '==', user.email)
-                  .orderBy('timestamp', 'asc')
-                  .onSnapshot(snap => {
-                      // Always start with the welcome message
-                      chatBox.innerHTML = `
-                        <div class="msg received">
-                            ${welcomeText}
-                            <span class="time">System Agent</span>
-                        </div>
-                      `;
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // 2. Fetch all previous chats
+            db.collection('chats')
+              .where('userEmail', '==', user.email)
+              .orderBy('timestamp', 'asc')
+              .onSnapshot(snap => {
+                  chatBox.innerHTML = welcomeHTML; // Keep welcome at top
 
-                      snap.forEach(doc => {
-                          const m = doc.data();
-                          const isSentByMe = m.sender === 'user';
-                          const div = document.createElement('div');
-                          div.className = `msg ${isSentByMe ? 'sent' : 'received'}`;
-                          
-                          // Format time
-                          const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...';
-                          
-                          div.innerHTML = `
-                              ${m.text || m.message}
-                              <span class="time">${time}</span>
-                          `;
-                          chatBox.appendChild(div);
-                      });
+                  snap.forEach(doc => {
+                      const m = doc.data();
+                      const isMe = m.sender === 'user';
+                      const div = document.createElement('div');
+                      div.className = `msg ${isMe ? 'sent' : 'received'}`;
                       
-                      // Auto-scroll to latest message
-                      chatBox.scrollTop = chatBox.scrollHeight;
+                      const time = m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...';
+                      
+                      div.innerHTML = `
+                          ${m.text || m.message}
+                          <span class="time">${time}</span>
+                      `;
+                      chatBox.appendChild(div);
                   });
-            } else {
-                window.location.href = "index.html";
-            }
-        });
-
-        async function sendMsg() {
-            const val = msgInput.value.trim();
-            const user = auth.currentUser;
-            if (!val || !user) return;
-
-            msgInput.value = ''; // Clear immediately
-            
-            await db.collection('chats').add({
-                userEmail: user.email,
-                text: val,
-                sender: 'user',
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
+                  chatBox.scrollTop = chatBox.scrollHeight;
+              });
+        } else {
+            window.location.href = "index.html";
         }
+    });
 
-        // Send on Enter key
-        msgInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") sendMsg();
+    async function sendMsg() {
+        const text = msgInput.value.trim();
+        const user = auth.currentUser;
+        if (!text || !user) return;
+
+        msgInput.value = '';
+        await db.collection('chats').add({
+            userEmail: user.email,
+            text: text,
+            sender: 'user',
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-    </script>
+    }
+
+    msgInput.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMsg(); });
+</script>
+
 </body>
 </html>
