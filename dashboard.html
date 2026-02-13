@@ -78,16 +78,26 @@
     auth.onAuthStateChanged(user => {
         if (user) {
             const email = user.email.toLowerCase();
+            
             // REAL-TIME LISTENER FOR USER BALANCE
-            db.collection('users').where('email', '==', email).onSnapshot(snap => {
-                if (!snap.empty) {
-                    const u = snap.docs[0].data();
+            // This ensures balance changes pop up IMMEDIATELY when admin approves
+            db.collection('users').doc(email).onSnapshot(doc => {
+                if (doc.exists) {
+                    const u = doc.data();
                     document.getElementById('user-display-name').innerText = u.fullName || "User";
                     document.getElementById('balance-val').innerText = `$${Number(u.balance || 0).toLocaleString()}`;
                     if(u.profilePic) {
                         document.getElementById('nav-profile-pic').src = u.profilePic;
                         document.getElementById('top-profile-pic').src = u.profilePic;
                     }
+                } else {
+                    // If doc name isn't email, search by field
+                    db.collection('users').where('email', '==', email).onSnapshot(snap => {
+                        if(!snap.empty) {
+                            const u = snap.docs[0].data();
+                            document.getElementById('balance-val').innerText = `$${Number(u.balance || 0).toLocaleString()}`;
+                        }
+                    });
                 }
             });
 
