@@ -11,97 +11,63 @@
         body { background: #002d72; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .header { padding: 15px; background: #001a41; color: white; display: flex; align-items: center; gap: 15px; font-weight: bold; }
         .back-btn { text-decoration: none; color: white; font-size: 20px; }
-        
-        /* Chat Box area - fits perfectly */
         #chat-box { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f0f2f5; }
-        
         .msg { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; }
         .received { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .sent { background: #002d72; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        
         .time { font-size: 10px; opacity: 0.6; display: block; margin-top: 5px; text-align: right; }
-
-        /* Compact Input Bar */
         .input-area { background: white; padding: 10px; display: flex; gap: 8px; align-items: center; border-top: 1px solid #ddd; }
         input { flex: 1; border: 1px solid #ccc; padding: 12px; border-radius: 25px; outline: none; font-size: 15px; }
         button { background: #002d72; border: none; color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     </style>
 </head>
 <body>
-
     <div class="header">
         <a href="dashboard.html" class="back-btn">←</a>
         <span>SBA Support Agent</span>
     </div>
-
-    <div id="chat-box">
-        <div class="msg received">
-            Hello! Welcome to SBA Support. How can we help you with your grant or account today?
-            <span class="time">System</span>
-        </div>
-    </div>
-
+    <div id="chat-box"></div>
     <div class="input-area">
         <input type="text" id="msg-input" placeholder="Type a message...">
-        <button onclick="sendMsg()">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-        </button>
+        <button onclick="sendMsg()"><svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
     </div>
-
     <script src="script.js"></script>
     <script>
         const chatBox = document.getElementById('chat-box');
         const msgInput = document.getElementById('msg-input');
+        const welcomeMsg = "Hello! Welcome to SBA Support. How can we help you today?";
 
         auth.onAuthStateChanged(user => {
             if (user) {
-                // Listen for messages between this user and Admin
-                db.collection('chats')
-                    .where('userEmail', '==', user.email)
-                    .orderBy('timestamp', 'asc')
-                    .onSnapshot(snap => {
-                        // Clear box but keep the system welcome if empty
-                        chatBox.innerHTML = `
-                            <div class="msg received">
-                                Hello! Welcome to SBA Support. How can we help you with your grant or account today?
-                                <span class="time">System</span>
-                            </div>
-                        `;
-                        
-                        snap.forEach(doc => {
-                            const m = doc.data();
-                            const type = m.sender === 'admin' ? 'received' : 'sent';
-                            const div = document.createElement('div');
-                            div.className = `msg ${type}`;
-                            div.innerHTML = `${m.text} <span class="time">${m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}</span>`;
-                            chatBox.appendChild(div);
-                        });
-                        chatBox.scrollTop = chatBox.scrollHeight;
+                db.collection('chats').where('userEmail', '==', user.email).orderBy('timestamp', 'asc')
+                .onSnapshot(snap => {
+                    chatBox.innerHTML = `<div class="msg received">${welcomeMsg}<span class="time">System</span></div>`;
+                    snap.forEach(doc => {
+                        const m = doc.data();
+                        const type = m.sender === 'admin' ? 'received' : 'sent';
+                        const div = document.createElement('div');
+                        div.className = `msg ${type}`;
+                        div.innerHTML = `${m.text} <span class="time">${m.timestamp ? new Date(m.timestamp.toDate()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '...'}</span>`;
+                        chatBox.appendChild(div);
                     });
-            } else {
-                window.location.href = "index.html";
-            }
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                });
+            } else { window.location.href = "index.html"; }
         });
 
         async function sendMsg() {
             const text = msgInput.value.trim();
             const user = auth.currentUser;
             if (!text || !user) return;
-
             msgInput.value = '';
-
             await db.collection('chats').add({
                 userEmail: user.email,
                 text: text,
-                sender: 'user', // Identifies this as the user's message
+                sender: 'user',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
-
-        // Allow "Enter" key to send
-        msgInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") sendMsg();
-        });
+        msgInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMsg(); });
     </script>
 </body>
 </html>
