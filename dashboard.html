@@ -87,22 +87,29 @@
                         document.getElementById('nav-profile-pic').src = u.profilePic;
                         document.getElementById('top-profile-pic').src = u.profilePic;
                     }
+                } else {
+                    // Handle case where user is logged in but no Firestore doc exists yet
+                    document.getElementById('user-display-name').innerText = user.email.split('@')[0];
+                    document.getElementById('balance-val').innerText = "$0.00";
                 }
             });
 
-            // LOAD RECENT ACTIVITY (Manual Sort for Index-Free)
+            // LOAD RECENT ACTIVITY
             db.collection('requests').where('email', '==', user.email).onSnapshot(snap => {
                 let items = [];
                 snap.forEach(d => items.push(d.data()));
+                
+                // Manual Sort: Most recent first
                 items.sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
                 
                 let h = '';
-                items.slice(0, 5).forEach(r => {
+                // Only show the 3 most recent
+                items.slice(0, 3).forEach(r => {
                     const color = r.status === 'pending' ? '#f39c12' : (r.status === 'successful' ? '#2ecc71' : '#e74c3c');
                     h += `<div style="border-bottom:1px solid #1a3a8a; padding:15px 0; display: flex; justify-content: space-between;">
                         <div>
                             <b>${(r.type || 'Request').toUpperCase()}</b><br>
-                            <small style="color:#888;">${r.timestamp ? new Date(r.timestamp.toDate()).toDateString() : 'Recent'}</small>
+                            <small style="color:#888;">${r.timestamp ? new Date(r.timestamp.toDate()).toDateString() : 'Just now'}</small>
                         </div>
                         <div style="text-align: right;">
                             <b>$${Number(r.amount).toLocaleString()}</b><br>
@@ -110,7 +117,7 @@
                         </div>
                     </div>`;
                 });
-                document.getElementById('activity-list').innerHTML = h || '<p>No activity yet.</p>';
+                document.getElementById('activity-list').innerHTML = h || '<p style="text-align:center; color:#888;">No activity yet.</p>';
             });
         } else { window.location.href = "index.html"; }
     });
