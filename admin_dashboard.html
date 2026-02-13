@@ -22,12 +22,12 @@
         .stat-container { display: flex; gap: 10px; margin-bottom: 20px; }
         .stat-box { background: rgba(52, 152, 219, 0.1); padding: 15px; border-radius: 12px; border: 1px solid #3498db; text-align: center; flex: 1; }
         .card { background: #161a1e; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #2c2f36; }
-        .btn { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        .btn { border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px; transition: 0.3s; }
         .btn-approve { background: #2ecc71; color: white; width: 48%; }
         .btn-decline { background: #e74c3c; color: white; width: 48%; }
-        .btn-del { background: #444; color: #ff4757; margin-top: 10px; width: 100%; border: 1px solid #ff4757; }
-        .chat-bubble { background: #1c1f24; padding: 12px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #3498db; }
-        .chat-input { flex: 1; padding: 8px; border-radius: 5px; border: 1px solid #3498db; background: #0b0e11; color: white; outline: none; }
+        .btn-del { background: transparent; color: #ff4757; margin-top: 10px; width: 100%; border: 1px solid #ff4757; }
+        .chat-input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #3498db; background: #0b0e11; color: white; outline: none; }
+        .msg-line { padding: 5px 0; border-bottom: 1px solid #2c2f36; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -48,13 +48,15 @@
 
     <div id="users-tab" class="tab-content">
         <div class="stat-container">
-            <div class="stat-box"><small>Users</small><b id="stat-users">0</b></div>
-            <div class="stat-box"><small>Vault</small><b id="stat-balance">$0</b></div>
+            <div class="stat-box"><small>Users</small><br><b id="stat-users">0</b></div>
+            <div class="stat-box"><small>Vault</small><br><b id="stat-balance">$0</b></div>
         </div>
         <div id="user-list"></div>
     </div>
 
-    <div id="chat-tab" class="tab-content"><div id="admin-chat-area"></div></div>
+    <div id="chat-tab" class="tab-content">
+        <div id="admin-chat-area"></div>
+    </div>
 </div>
 
 <script>
@@ -71,7 +73,7 @@
     });
 
     function loadData() {
-        // Load Requests
+        // 1. Load Pending Requests
         db.collection('requests').where('status', '==', 'pending').onSnapshot(snap => {
             document.getElementById('dot-req').style.display = snap.empty ? "none" : "block";
             let h = '';
@@ -89,20 +91,22 @@
             document.getElementById('request-list').innerHTML = h || '<p align="center">No pending requests.</p>';
         });
 
-        // Load Users
+        // 2. Load Users with Add/Sub functionality
         db.collection('users').onSnapshot(snap => {
             let h = ''; let total = 0;
             snap.forEach(doc => {
-                const u = doc.data(); total += Number(u.balance || 0);
+                const u = doc.data(); 
+                const emailId = doc.id; // Usually the email
+                total += Number(u.balance || 0);
                 h += `<div class="card">
-                    <b>${u.fullName}</b><br><small>${u.email}</small><br>
-                    <span style="color:#2ecc71">$${Number(u.balance || 0).toLocaleString()}</span>
+                    <b>${u.fullName || 'User'}</b><br><small>${emailId}</small><br>
+                    <span style="color:#2ecc71; font-size: 18px;">$${Number(u.balance || 0).toLocaleString()}</span>
                     <div style="display:flex; gap:5px; margin-top:10px">
-                        <input type="number" id="amt-${doc.id}" class="chat-input" placeholder="Amount">
-                        <button class="btn" style="background:#3498db; color:white" onclick="editBal('${doc.id}', 'add')">ADD</button>
-                        <button class="btn" style="background:#888; color:white" onclick="editBal('${doc.id}', 'sub')">SUB</button>
+                        <input type="number" id="amt-${emailId.replace(/[^a-z0-9]/g,'')}" class="chat-input" placeholder="Amount">
+                        <button class="btn" style="background:#3498db; color:white" onclick="editBal('${emailId}', 'add')">ADD</button>
+                        <button class="btn" style="background:#888; color:white" onclick="editBal('${emailId}', 'sub')">SUB</button>
                     </div>
-                    <button class="btn btn-del" onclick="deleteUser('${doc.id}')">DELETE USER</button>
+                    <button class="btn btn-del" onclick="deleteUser('${emailId}')">DELETE USER</button>
                 </div>`;
             });
             document.getElementById('user-list').innerHTML = h;
@@ -110,28 +114,37 @@
             document.getElementById('stat-balance').innerText = '$' + total.toLocaleString();
         });
 
-        // Load Chats
-        db.collection('chats').orderBy('timestamp', 'desc').onSnapshot(snap => {
-            let groups = {}; snap.forEach(doc => {
-                let m = doc.data(); if(!groups[m.userEmail]) groups[m.userEmail] = m;
+        // 3. Load Chat Groups (Conversation mode)
+        db.collection('chats').orderBy('timestamp', 'asc').onSnapshot(snap => {
+            let userChats = {};
+            snap.forEach(doc => {
+                const m = doc.data();
+                if (!userChats[m.userEmail]) userChats[m.userEmail] = [];
+                userChats[m.userEmail].push(m);
             });
+
             let h = '';
-            for(let email in groups) {
+            for (let email in userChats) {
+                const safeId = email.replace(/[^a-z0-9]/g,'');
+                let messagesHtml = userChats[email].slice(-3).map(m => 
+                    `<div class="msg-line"><b>${m.sender}:</b> ${m.text || m.message}</div>`
+                ).join('');
+
                 h += `<div class="card">
-                    <small style="color:#3498db">${email}</small>
-                    <p style="font-size:14px">${groups[email].message}</p>
+                    <b style="color:#3498db">${email}</b>
+                    <div style="max-height: 100px; overflow-y: auto; margin: 10px 0;">${messagesHtml}</div>
                     <div style="display:flex; gap:5px">
-                        <input type="text" id="rep-${email.replace(/[^a-z]/g,'')}" class="chat-input" placeholder="Reply...">
+                        <input type="text" id="rep-${safeId}" class="chat-input" placeholder="Reply...">
                         <button class="btn" style="background:#2ecc71; color:white" onclick="reply('${email}')">SEND</button>
                     </div>
                 </div>`;
             }
-            document.getElementById('admin-chat-area').innerHTML = h || '<p align="center">No messages.</p>';
+            document.getElementById('admin-chat-area').innerHTML = h || '<p align="center">No active chats.</p>';
         });
     }
 
     async function approve(docId, email, amt, type) {
-        if(!confirm("Approve?")) return;
+        if(!confirm("Approve this transaction?")) return;
         const uRef = db.collection('users').doc(email);
         const uDoc = await uRef.get();
         if(uDoc.exists) {
@@ -139,33 +152,39 @@
             let newBal = (type === 'withdrawal') ? cur - amt : cur + amt;
             await uRef.update({ balance: newBal });
             await db.collection('requests').doc(docId).update({ status: 'successful' });
-        }
+            alert("Success!");
+        } else { alert("User document not found at " + email); }
     }
 
-    async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
+    async function decline(id) { 
+        if(confirm("Decline?")) await db.collection('requests').doc(id).update({ status: 'declined' }); 
+    }
 
-    async function editBal(id, type) {
-        let val = Number(document.getElementById('amt-'+id).value);
+    async function editBal(email, type) {
+        const safeId = email.replace(/[^a-z0-9]/g,'');
+        let val = Number(document.getElementById('amt-' + safeId).value);
         if(!val) return;
-        let ref = db.collection('users').doc(id);
+        let ref = db.collection('users').doc(email);
         let d = await ref.get();
-        let newB = type === 'add' ? Number(d.data().balance || 0) + val : Number(d.data().balance || 0) - val;
+        let current = Number(d.data().balance || 0);
+        let newB = (type === 'add') ? current + val : current - val;
         await ref.update({ balance: newB });
-        document.getElementById('amt-'+id).value = '';
+        document.getElementById('amt-' + safeId).value = '';
+        alert("Balance Updated");
     }
 
-    async function deleteUser(id) {
-        if(confirm("Permanently delete?")) await db.collection('users').doc(id).delete();
+    async function deleteUser(email) {
+        if(confirm("Delete " + email + "?")) await db.collection('users').doc(email).delete();
     }
 
     async function reply(email) {
-        let cid = email.replace(/[^a-z]/g,'');
-        let txt = document.getElementById('rep-'+cid).value;
+        const safeId = email.replace(/[^a-z0-9]/g,'');
+        let txt = document.getElementById('rep-' + safeId).value;
         if(!txt) return;
         await db.collection('chats').add({
-            userEmail: email, message: txt, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            userEmail: email, text: txt, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-        document.getElementById('rep-'+cid).value = '';
+        document.getElementById('rep-' + safeId).value = '';
     }
 </script>
 </body>
