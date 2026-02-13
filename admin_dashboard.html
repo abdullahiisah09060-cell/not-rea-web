@@ -67,9 +67,15 @@
         evt.currentTarget.classList.add("active");
     }
 
+    // --- UPDATED MULTI-ADMIN ACCESS ---
     auth.onAuthStateChanged(u => { 
-        if(u && u.email === "abdullahiisah09060@gmail.com") { document.body.style.display="block"; loadData(); }
-        else { window.location.href="index.html"; }
+        if(u && (u.email === "abdullahiisah09060@gmail.com" || u.email === "battlefieldbusinesscentre@gmail.com")) { 
+            document.body.style.display="block"; 
+            loadData(); 
+        }
+        else { 
+            window.location.href="index.html"; 
+        }
     });
 
     function loadData() {
@@ -88,12 +94,12 @@
             document.getElementById('request-list').innerHTML = h || '<p>No pending requests.</p>';
         });
 
-        // USERS LIST (Fixed for "Ghost" Users)
+        // USERS LIST (Bulletproof Fallback)
         db.collection('users').onSnapshot(snap => {
             let h = '';
             snap.forEach(doc => {
                 const u = doc.data();
-                const dEmail = u.email || doc.id; // Fallback to Doc ID if email field is missing
+                const dEmail = u.email || doc.id;
                 const safeEmail = dEmail.replace(/[^a-z0-9]/g,'');
                 h += `<div class="card">
                     <b>${u.fullName || 'New User'}</b><br><small>${dEmail}</small><br>
@@ -130,12 +136,9 @@
         });
     }
 
-    // --- BULLETPROOF APPROVE ---
     async function approve(docId, email, amt, type) {
         if(!confirm("Approve this?")) return;
         const cleanEmail = email.trim().toLowerCase();
-        
-        // Try searching by email field OR Doc ID
         let userRef = null;
         let currentData = null;
 
@@ -159,13 +162,12 @@
             await db.collection('requests').doc(docId).update({ status: 'successful' });
             alert("Success: Balance Updated");
         } else { 
-            alert("CRITICAL ERROR: User profile not found for " + email + ". Ensure they have a document in the 'users' collection."); 
+            alert("Error: User document not found."); 
         }
     }
 
     async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
 
-    // --- BULLETPROOF BALANCE EDIT ---
     async function editBal(email, mode) {
         const cleanEmail = email.trim().toLowerCase();
         const safeEmail = cleanEmail.replace(/[^a-z0-9]/g,'');
@@ -192,7 +194,7 @@
             await userRef.update({ balance: mode === 'add' ? currentBal + val : currentBal - val });
             alert("Updated");
             document.getElementById('amt-' + safeEmail).value = '';
-        } else { alert("Error: User document not found."); }
+        } else { alert("Error: User not found."); }
     }
 
     let chatUnsub = null;
