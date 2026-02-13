@@ -3,226 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBA | MASTER ADMIN</title>
+    <title>SBA Grant - Access</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="script.js"></script>
     <style>
-        body { background-color: #0b0e11; color: white; font-family: sans-serif; margin: 0; display: none; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: #161a1e; padding: 15px; border-bottom: 2px solid #3498db; }
-        .tab-bar { display: flex; background: #161a1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #2c2f36; }
-        .tab { flex: 1; padding: 15px; text-align: center; font-size: 12px; font-weight: bold; color: #888; cursor: pointer; }
-        .tab.active { color: #3498db; border-bottom: 3px solid #3498db; background: rgba(52, 152, 219, 0.1); }
-        .content-area { padding: 15px; }
-        .card { background: #161a1e; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #2c2f36; position: relative; }
-        .btn { border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .chat-input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #3498db; background: #0b0e11; color: white; outline: none; }
-        #chat-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; z-index: 1000; flex-direction: column; }
-        #chat-msgs { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .m-bubble { padding: 10px; border-radius: 10px; max-width: 80%; font-size: 14px; }
-        .m-user { background: #2c2f36; align-self: flex-start; }
-        .m-admin { background: #3498db; align-self: flex-end; }
-        .red-dot { position: absolute; top: 10px; right: 10px; width: 12px; height: 12px; background: #e74c3c; border-radius: 50%; box-shadow: 0 0 10px #e74c3c; }
+        body { background: #002d72; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .card { width: 90%; max-width: 400px; background: white; border-radius: 30px; padding: 40px 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-align: center; }
+        .app-title { color: #002d72; font-weight: bold; font-size: 22px; margin-bottom: 30px; text-transform: uppercase; }
+        .toggle-box { display: flex; background: #f4f7f6; border-radius: 12px; padding: 5px; margin-bottom: 35px; }
+        .tgl-btn { flex: 1; padding: 12px; cursor: pointer; border-radius: 10px; font-size: 14px; font-weight: bold; border: none; outline: none; transition: 0.3s; }
+        .active { background: #002d72; color: white; }
+        .inactive { background: transparent; color: #888; }
+        input { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 12px; box-sizing: border-box; margin-bottom: 15px; font-size: 16px; outline: none; }
+        .btn-main { width: 100%; padding: 18px; background: #002d72; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-main:disabled { background: #ccc; }
+        .footer-links { font-size: 14px; margin: 20px 0; color: #666; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .footer-links input[type="checkbox"] { width: 18px; height: 18px; margin: 0; cursor: pointer; }
+        .footer-links a { color: #002d72; text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>
-
-<div class="header">
-    <h1 style="font-size: 16px;">SBA MASTER</h1>
-    <button onclick="logout()" class="btn" style="background:#e74c3c; color:white;">Logout</button>
-</div>
-
-<div class="tab-bar">
-    <div class="tab active" onclick="openTab(event, 'pending-tab')">Requests</div>
-    <div class="tab" onclick="openTab(event, 'users-tab')">Users</div>
-    <div class="tab" onclick="openTab(event, 'chat-tab')">Messages</div>
-</div>
-
-<div class="content-area">
-    <div id="pending-tab" class="tab-content active"><div id="request-list"></div></div>
-    <div id="users-tab" class="tab-content" style="display:none;"><div id="user-list"></div></div>
-    <div id="chat-tab" class="tab-content" style="display:none;"><div id="admin-chat-area"></div></div>
-</div>
-
-<div id="chat-overlay">
-    <div style="padding:15px; background:#161a1e; border-bottom:1px solid #3498db; display:flex; justify-content:space-between;">
-        <span id="chat-title">Chat</span>
-        <button class="btn" style="background:#444; color:white;" onclick="closeChat()">Close</button>
+    <div class="card">
+        <div class="app-title">SBA GRANT PORTAL</div>
+        <div class="toggle-box">
+            <button id="btn-login" class="tgl-btn active" onclick="showTab('login')">Log In</button>
+            <button id="btn-signup" class="tgl-btn inactive" onclick="showTab('signup')">Sign Up</button>
+        </div>
+        <div id="login-section">
+            <input type="email" id="l-email" placeholder="Email Address">
+            <input type="password" id="l-pass" placeholder="Password">
+            <button class="btn-main" id="login-btn" onclick="login()">Log In</button>
+        </div>
+        <div id="signup-section" style="display:none;">
+            <input type="text" id="s-name" placeholder="Full Name">
+            <input type="email" id="s-email" placeholder="Email Address">
+            <input type="password" id="s-pass" placeholder="Password">
+            <div class="footer-links">
+                <input type="checkbox" id="terms-check">
+                <label for="terms-check">Agree to our <a href="terms.html">Terms & Conditions</a></label>
+            </div>
+            <button class="btn-main" id="reg-btn" onclick="signup()">Sign Up</button>
+        </div>
     </div>
-    <div id="chat-msgs"></div>
-    <div style="padding:15px; display:flex; gap:10px; background:#161a1e;">
-        <input type="text" id="admin-reply-input" class="chat-input" placeholder="Message...">
-        <button class="btn" style="background:#3498db; color:white;" onclick="sendReply()">Send</button>
-    </div>
-</div>
 
-<script>
-    let activeChatEmail = "";
-
-    function openTab(evt, tabName) {
-        document.querySelectorAll(".tab-content").forEach(c => c.style.display = "none");
-        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-        document.getElementById(tabName).style.display = "block";
-        evt.currentTarget.classList.add("active");
-    }
-
-    // --- UPDATED MULTI-ADMIN ACCESS ---
-    auth.onAuthStateChanged(u => { 
-        if(u && (u.email === "abdullahiisah09060@gmail.com" || u.email === "battlefieldbusinesscentre@gmail.com")) { 
-            document.body.style.display="block"; 
-            loadData(); 
-        }
-        else { 
-            window.location.href="index.html"; 
-        }
-    });
-
-    function loadData() {
-        // REQUESTS
-        db.collection('requests').where('status', '==', 'pending').onSnapshot(snap => {
-            let h = '';
-            snap.forEach(doc => {
-                const r = doc.data();
-                h += `<div class="card">
-                    <b>${r.email}</b><br><small>${r.type}</small><br>
-                    <span style="color:#2ecc71">$${Number(r.amount).toLocaleString()}</span><br><br>
-                    <button class="btn" style="background:#2ecc71; color:white; width:45%" onclick="approve('${doc.id}', '${r.email}', ${r.amount}, '${r.type}')">APPROVE</button>
-                    <button class="btn" style="background:#e74c3c; color:white; width:45%" onclick="decline('${doc.id}')">DECLINE</button>
-                </div>`;
-            });
-            document.getElementById('request-list').innerHTML = h || '<p>No pending requests.</p>';
-        });
-
-        // USERS LIST (Bulletproof Fallback)
-        db.collection('users').onSnapshot(snap => {
-            let h = '';
-            snap.forEach(doc => {
-                const u = doc.data();
-                const dEmail = u.email || doc.id;
-                const safeEmail = dEmail.replace(/[^a-z0-9]/g,'');
-                h += `<div class="card">
-                    <b>${u.fullName || 'New User'}</b><br><small>${dEmail}</small><br>
-                    <b style="color:#3498db">$${Number(u.balance || 0).toLocaleString()}</b>
-                    <div style="margin-top:10px; display:flex; gap:5px;">
-                        <input type="number" id="amt-${safeEmail}" class="chat-input" placeholder="Amt" style="width:70px">
-                        <button class="btn" style="background:#3498db; color:white" onclick="editBal('${dEmail}', 'add')">+</button>
-                        <button class="btn" style="background:#888; color:white" onclick="editBal('${dEmail}', 'sub')">-</button>
-                    </div>
-                </div>`;
-            });
-            document.getElementById('user-list').innerHTML = h || '<p>No users found.</p>';
-        });
-
-        // MESSAGES
-        db.collection('chats').onSnapshot(snap => {
-            let groups = {};
-            snap.forEach(doc => {
-                let m = doc.data();
-                if (!groups[m.userEmail] || (m.timestamp?.seconds > groups[m.userEmail].timestamp?.seconds)) {
-                    groups[m.userEmail] = m;
+    <script src="script.js"></script>
+    <script>
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                const admins = [
+                    "abdullahiisah09060@gmail.com",
+                    "battlefieldbusinesscentre@gmail.com",
+                    "mskatrik880@gmail.com"
+                ];
+                if (admins.includes(user.email.toLowerCase())) {
+                    window.location.href = 'admin_dashboard.html';
+                } else {
+                    window.location.href = 'dashboard.html';
                 }
-            });
-            let h = '';
-            for (let email in groups) {
-                const needsReply = groups[email].sender === 'user';
-                h += `<div class="card" onclick="openChat('${email}')" style="cursor:pointer; border-left: ${needsReply ? '5px solid #e74c3c' : '1px solid #2c2f36'}">
-                    ${needsReply ? '<div class="red-dot"></div>' : ''}
-                    <b>${email}</b><br>
-                    <small style="${needsReply ? 'color:white; font-weight:bold' : 'color:#888'}">${groups[email].text || 'New message'}</small>
-                </div>`;
             }
-            document.getElementById('admin-chat-area').innerHTML = h || '<p>No chats.</p>';
         });
-    }
 
-    async function approve(docId, email, amt, type) {
-        if(!confirm("Approve this?")) return;
-        const cleanEmail = email.trim().toLowerCase();
-        let userRef = null;
-        let currentData = null;
-
-        const q = await db.collection('users').where('email', '==', cleanEmail).get();
-        if(!q.empty) {
-            userRef = q.docs[0].ref;
-            currentData = q.docs[0].data();
-        } else {
-            const docRef = db.collection('users').doc(cleanEmail);
-            const docSnap = await docRef.get();
-            if(docSnap.exists) {
-                userRef = docRef;
-                currentData = docSnap.data();
-            }
+        function showTab(type) {
+            document.getElementById('login-section').style.display = type === 'login' ? 'block' : 'none';
+            document.getElementById('signup-section').style.display = type === 'signup' ? 'block' : 'none';
+            document.getElementById('btn-login').className = type === 'login' ? 'tgl-btn active' : 'tgl-btn inactive';
+            document.getElementById('btn-signup').className = type === 'signup' ? 'tgl-btn active' : 'tgl-btn inactive';
         }
 
-        if(userRef) {
-            const cur = Number(currentData.balance || 0);
-            const newBal = (type === 'withdrawal') ? cur - Number(amt) : cur + Number(amt);
-            await userRef.update({ balance: newBal });
-            await db.collection('requests').doc(docId).update({ status: 'successful' });
-            alert("Success: Balance Updated");
-        } else { 
-            alert("Error: User document not found."); 
-        }
-    }
+        async function signup() {
+            const name = document.getElementById('s-name').value;
+            const email = document.getElementById('s-email').value.trim().toLowerCase();
+            const pass = document.getElementById('s-pass').value;
+            const agree = document.getElementById('terms-check').checked;
+            const btn = document.getElementById('reg-btn');
 
-    async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
+            if (!name || !email || !pass || !agree) return alert("Fill all fields and agree to terms");
+            btn.disabled = true; btn.innerText = "Creating...";
 
-    async function editBal(email, mode) {
-        const cleanEmail = email.trim().toLowerCase();
-        const safeEmail = cleanEmail.replace(/[^a-z0-9]/g,'');
-        const val = Number(document.getElementById('amt-' + safeEmail).value);
-        if(!val) return;
-
-        let userRef = null;
-        let currentBal = 0;
-
-        const q = await db.collection('users').where('email', '==', cleanEmail).get();
-        if(!q.empty) {
-            userRef = q.docs[0].ref;
-            currentBal = Number(q.docs[0].data().balance || 0);
-        } else {
-            const docRef = db.collection('users').doc(cleanEmail);
-            const docSnap = await docRef.get();
-            if(docSnap.exists) {
-                userRef = docRef;
-                currentBal = Number(docSnap.data().balance || 0);
-            }
+            try {
+                const cred = await auth.createUserWithEmailAndPassword(email, pass);
+                await db.collection('users').doc(email).set({
+                    fullName: name, email: email, uid: cred.user.uid, balance: 0, status: "Active",
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert("Success!");
+            } catch (err) { alert(err.message); btn.disabled = false; btn.innerText = "Sign Up"; }
         }
 
-        if(userRef) {
-            await userRef.update({ balance: mode === 'add' ? currentBal + val : currentBal - val });
-            alert("Updated");
-            document.getElementById('amt-' + safeEmail).value = '';
-        } else { alert("Error: User not found."); }
-    }
-
-    let chatUnsub = null;
-    function openChat(email) {
-        activeChatEmail = email;
-        document.getElementById('chat-overlay').style.display = 'flex';
-        if(chatUnsub) chatUnsub();
-        chatUnsub = db.collection('chats').where('userEmail', '==', email).onSnapshot(snap => {
-            let msgs = [];
-            snap.forEach(doc => msgs.push(doc.data()));
-            msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-            let h = '';
-            msgs.forEach(m => {
-                h += `<div class="m-bubble ${m.sender==='admin'?'m-admin':'m-user'}">${m.text || m.message}</div>`;
-            });
-            document.getElementById('chat-msgs').innerHTML = h;
-            document.getElementById('chat-msgs').scrollTop = 99999;
-        });
-    }
-
-    function closeChat() { document.getElementById('chat-overlay').style.display = 'none'; }
-
-    async function sendReply() {
-        const t = document.getElementById('admin-reply-input').value;
-        if(!t) return;
-        await db.collection('chats').add({ userEmail: activeChatEmail, text: t, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-        document.getElementById('admin-reply-input').value = '';
-    }
-</script>
+        async function login() {
+            const email = document.getElementById('l-email').value.trim().toLowerCase();
+            const pass = document.getElementById('l-pass').value;
+            const btn = document.getElementById('login-btn');
+            if (!email || !pass) return alert("Fill all fields");
+            btn.disabled = true; btn.innerText = "Verifying...";
+            try { await auth.signInWithEmailAndPassword(email, pass); } 
+            catch (err) { alert(err.message); btn.disabled = false; btn.innerText = "Log In"; }
+        }
+    </script>
 </body>
 </html>
