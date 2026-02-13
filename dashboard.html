@@ -77,8 +77,9 @@
 
     auth.onAuthStateChanged(user => {
         if (user) {
-            // LOAD USER DATA
-            db.collection('users').where('email', '==', user.email).onSnapshot(snap => {
+            const email = user.email.toLowerCase();
+            // REAL-TIME LISTENER FOR USER BALANCE
+            db.collection('users').where('email', '==', email).onSnapshot(snap => {
                 if (!snap.empty) {
                     const u = snap.docs[0].data();
                     document.getElementById('user-display-name').innerText = u.fullName || "User";
@@ -87,23 +88,16 @@
                         document.getElementById('nav-profile-pic').src = u.profilePic;
                         document.getElementById('top-profile-pic').src = u.profilePic;
                     }
-                } else {
-                    // Handle case where user is logged in but no Firestore doc exists yet
-                    document.getElementById('user-display-name').innerText = user.email.split('@')[0];
-                    document.getElementById('balance-val').innerText = "$0.00";
                 }
             });
 
-            // LOAD RECENT ACTIVITY
-            db.collection('requests').where('email', '==', user.email).onSnapshot(snap => {
+            // REAL-TIME LISTENER FOR ACTIVITY
+            db.collection('requests').where('email', '==', email).onSnapshot(snap => {
                 let items = [];
                 snap.forEach(d => items.push(d.data()));
-                
-                // Manual Sort: Most recent first
                 items.sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
                 
                 let h = '';
-                // Only show the 3 most recent
                 items.slice(0, 3).forEach(r => {
                     const color = r.status === 'pending' ? '#f39c12' : (r.status === 'successful' ? '#2ecc71' : '#e74c3c');
                     h += `<div style="border-bottom:1px solid #1a3a8a; padding:15px 0; display: flex; justify-content: space-between;">
