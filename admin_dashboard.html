@@ -9,24 +9,20 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="script.js"></script>
     <style>
-        body { background-color: #0b0e11; color: white; font-family: sans-serif; padding: 0; margin: 0; display: none; }
+        body { background-color: #0b0e11; color: white; font-family: sans-serif; margin: 0; display: none; }
         .header { display: flex; justify-content: space-between; align-items: center; background: #161a1e; padding: 15px; border-bottom: 2px solid #3498db; }
-        .tab-bar { display: flex; background: #161a1e; border-bottom: 1px solid #2c2f36; position: sticky; top: 0; z-index: 100; }
-        .tab { flex: 1; padding: 15px; text-align: center; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #888; cursor: pointer; }
+        .tab-bar { display: flex; background: #161a1e; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #2c2f36; }
+        .tab { flex: 1; padding: 15px; text-align: center; font-size: 12px; font-weight: bold; color: #888; cursor: pointer; }
         .tab.active { color: #3498db; border-bottom: 3px solid #3498db; background: rgba(52, 152, 219, 0.1); }
-        .content-area { padding: 15px; padding-bottom: 80px; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .card { background: #161a1e; padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #2c2f36; }
-        .btn { border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px; }
-        .btn-approve { background: #2ecc71; color: white; width: 48%; }
-        .btn-decline { background: #e74c3c; color: white; width: 48%; }
+        .content-area { padding: 15px; }
+        .card { background: #161a1e; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #2c2f36; }
+        .btn { border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .chat-input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #3498db; background: #0b0e11; color: white; outline: none; }
         
+        /* Chat UI Overlay */
         #chat-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; z-index: 1000; flex-direction: column; }
-        .chat-header { padding: 15px; background: #161a1e; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #3498db; }
         #chat-msgs { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .m-bubble { padding: 10px 14px; border-radius: 12px; max-width: 80%; font-size: 14px; }
+        .m-bubble { padding: 10px; border-radius: 10px; max-width: 80%; font-size: 14px; }
         .m-user { background: #2c2f36; align-self: flex-start; }
         .m-admin { background: #3498db; align-self: flex-end; }
     </style>
@@ -34,7 +30,7 @@
 <body>
 
 <div class="header">
-    <h1 style="font-size: 16px; margin: 0;">SBA MASTER</h1>
+    <h1 style="font-size: 16px;">SBA MASTER</h1>
     <button onclick="logout()" class="btn" style="background:#e74c3c; color:white;">Logout</button>
 </div>
 
@@ -46,30 +42,29 @@
 
 <div class="content-area">
     <div id="pending-tab" class="tab-content active"><div id="request-list"></div></div>
-    <div id="users-tab" class="tab-content"><div id="user-list"></div></div>
-    <div id="chat-tab" class="tab-content"><div id="admin-chat-area"></div></div>
+    <div id="users-tab" class="tab-content" style="display:none;"><div id="user-list"></div></div>
+    <div id="chat-tab" class="tab-content" style="display:none;"><div id="admin-chat-area"></div></div>
 </div>
 
 <div id="chat-overlay">
-    <div class="chat-header">
-        <button class="btn" style="background:#444; color:white;" onclick="closeChat()">← Back</button>
-        <span id="chat-title">User Chat</span>
+    <div style="padding:15px; background:#161a1e; border-bottom:1px solid #3498db; display:flex; justify-content:space-between;">
+        <span id="chat-title">Chat</span>
+        <button class="btn" style="background:#444; color:white;" onclick="closeChat()">Close</button>
     </div>
     <div id="chat-msgs"></div>
     <div style="padding:15px; display:flex; gap:10px; background:#161a1e;">
-        <input type="text" id="admin-reply-input" class="chat-input" placeholder="Type a reply...">
-        <button class="btn" style="background:#3498db; color:white; width:80px;" onclick="sendReply()">Send</button>
+        <input type="text" id="admin-reply-input" class="chat-input" placeholder="Message...">
+        <button class="btn" style="background:#3498db; color:white;" onclick="sendReply()">Send</button>
     </div>
 </div>
 
 <script>
     let activeChatEmail = "";
-    let chatUnsub = null;
 
     function openTab(evt, tabName) {
-        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.style.display = "none");
         document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-        document.getElementById(tabName).classList.add("active");
+        document.getElementById(tabName).style.display = "block";
         evt.currentTarget.classList.add("active");
     }
 
@@ -79,62 +74,57 @@
     });
 
     function loadData() {
-        // Load Requests
+        // REQUESTS
         db.collection('requests').where('status', '==', 'pending').onSnapshot(snap => {
             let h = '';
             snap.forEach(doc => {
                 const r = doc.data();
                 h += `<div class="card">
-                    <b>${r.email}</b><br><small>${r.type.toUpperCase()}</small><br>
-                    <span style="color:#2ecc71; font-weight:bold">$${Number(r.amount).toLocaleString()}</span>
-                    <div style="margin-top:10px; display:flex; justify-content:space-between">
-                        <button class="btn btn-approve" onclick="approve('${doc.id}', '${r.email}', ${r.amount}, '${r.type}')">APPROVE</button>
-                        <button class="btn btn-decline" onclick="decline('${doc.id}')">DECLINE</button>
-                    </div>
+                    <b>${r.email}</b><br><small>${r.type}</small><br>
+                    <span style="color:#2ecc71">$${r.amount}</span><br><br>
+                    <button class="btn" style="background:#2ecc71; color:white; width:45%" onclick="approve('${doc.id}', '${r.email}', ${r.amount}, '${r.type}')">APPROVE</button>
+                    <button class="btn" style="background:#e74c3c; color:white; width:45%" onclick="decline('${doc.id}')">DECLINE</button>
                 </div>`;
             });
-            document.getElementById('request-list').innerHTML = h || '<p align="center">No pending requests.</p>';
+            document.getElementById('request-list').innerHTML = h || '<p>No pending requests.</p>';
         });
 
-        // Load Users
+        // USERS LIST
         db.collection('users').onSnapshot(snap => {
             let h = '';
             snap.forEach(doc => {
-                const u = doc.data(); 
-                const uid = doc.id;
-                const safeEmailId = (u.email || uid).replace(/[^a-z0-9]/g,'');
+                const u = doc.data();
+                const safeEmail = (u.email || doc.id).replace(/[^a-z0-9]/g,'');
                 h += `<div class="card">
-                    <b>${u.fullName || 'No Name'}</b><br><small>${u.email || 'No Email'}</small><br>
-                    <span style="color:#2ecc71">$${Number(u.balance || 0).toLocaleString()}</span>
-                    <div style="display:flex; gap:5px; margin-top:10px">
-                        <input type="number" id="amt-${safeEmailId}" class="chat-input" placeholder="Amount">
-                        <button class="btn" style="background:#3498db; color:white" onclick="editBal('${uid}', '${u.email}', 'add')">ADD</button>
-                        <button class="btn" style="background:#888; color:white" onclick="editBal('${uid}', '${u.email}', 'sub')">SUB</button>
+                    <b>${u.fullName || 'User'}</b><br><small>${u.email || doc.id}</small><br>
+                    <b style="color:#3498db">$${u.balance || 0}</b>
+                    <div style="margin-top:10px; display:flex; gap:5px;">
+                        <input type="number" id="amt-${safeEmail}" class="chat-input" placeholder="Amount">
+                        <button class="btn" style="background:#3498db; color:white" onclick="editBal('${u.email}', 'add')">+</button>
+                        <button class="btn" style="background:#888; color:white" onclick="editBal('${u.email}', 'sub')">-</button>
                     </div>
                 </div>`;
             });
-            document.getElementById('user-list').innerHTML = h || '<p align="center">No users found.</p>';
+            document.getElementById('user-list').innerHTML = h;
         });
 
-        // Load Message List
+        // MESSAGE LIST
         db.collection('chats').orderBy('timestamp', 'desc').onSnapshot(snap => {
             let groups = {};
-            snap.forEach(doc => {
-                const m = doc.data();
-                if (!groups[m.userEmail]) groups[m.userEmail] = m;
-            });
+            snap.forEach(doc => { if(!groups[doc.data().userEmail]) groups[doc.data().userEmail] = doc.data(); });
             let h = '';
             for (let email in groups) {
-                h += `<div class="card" onclick="openChat('${email}')" style="cursor:pointer; border-left:4px solid #3498db">
-                    <b>${email}</b><br><small>${groups[email].text || groups[email].message}</small>
+                h += `<div class="card" onclick="openChat('${email}')" style="cursor:pointer">
+                    <b>${email}</b><br><small>${groups[email].text || 'New message'}</small>
                 </div>`;
             }
-            document.getElementById('admin-chat-area').innerHTML = h || '<p align="center">No messages.</p>';
+            document.getElementById('admin-chat-area').innerHTML = h;
         });
     }
 
     async function approve(docId, email, amt, type) {
         if(!confirm("Approve?")) return;
+        // SEARCHING BY EMAIL FIELD INSTEAD OF DOC NAME
         const q = await db.collection('users').where('email', '==', email).get();
         if(!q.empty) {
             const userRef = q.docs[0].ref;
@@ -142,25 +132,27 @@
             const newBal = (type === 'withdrawal') ? cur - amt : cur + amt;
             await userRef.update({ balance: newBal });
             await db.collection('requests').doc(docId).update({ status: 'successful' });
-            alert("Approved!");
-        } else { alert("User profile not found for " + email); }
+            alert("Success!");
+        } else { alert("User not found in database for " + email); }
     }
 
     async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
 
-    async function editBal(uid, email, type) {
-        const safeEmailId = (email || uid).replace(/[^a-z0-9]/g,'');
-        const val = Number(document.getElementById('amt-' + safeEmailId).value);
+    async function editBal(email, mode) {
+        const safeEmail = email.replace(/[^a-z0-9]/g,'');
+        const val = Number(document.getElementById('amt-' + safeEmail).value);
         if(!val) return;
         const q = await db.collection('users').where('email', '==', email).get();
-        const userRef = !q.empty ? q.docs[0].ref : db.collection('users').doc(uid);
-        const d = await userRef.get();
-        const newB = type === 'add' ? (Number(d.data().balance || 0) + val) : (Number(d.data().balance || 0) - val);
-        await userRef.update({ balance: newB });
-        document.getElementById('amt-' + safeEmailId).value = '';
-        alert("Updated!");
+        if(!q.empty) {
+            const userRef = q.docs[0].ref;
+            const cur = Number(q.docs[0].data().balance || 0);
+            const newB = mode === 'add' ? cur + val : cur - val;
+            await userRef.update({ balance: newB });
+            alert("Balance Updated");
+        }
     }
 
+    let chatUnsub = null;
     function openChat(email) {
         activeChatEmail = email;
         document.getElementById('chat-overlay').style.display = 'flex';
@@ -169,23 +161,19 @@
             let h = '';
             snap.forEach(doc => {
                 const m = doc.data();
-                const cls = m.sender === 'admin' ? 'm-admin' : 'm-user';
-                h += `<div class="m-bubble ${cls}">${m.text || m.message}</div>`;
+                h += `<div class="m-bubble ${m.sender==='admin'?'m-admin':'m-user'}">${m.text || m.message}</div>`;
             });
-            const box = document.getElementById('chat-msgs');
-            box.innerHTML = h;
-            box.scrollTop = box.scrollHeight;
+            document.getElementById('chat-msgs').innerHTML = h;
+            document.getElementById('chat-msgs').scrollTop = 99999;
         });
     }
 
     function closeChat() { document.getElementById('chat-overlay').style.display = 'none'; }
 
     async function sendReply() {
-        const txt = document.getElementById('admin-reply-input').value;
-        if(!txt) return;
-        await db.collection('chats').add({
-            userEmail: activeChatEmail, text: txt, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        const t = document.getElementById('admin-reply-input').value;
+        if(!t) return;
+        await db.collection('chats').add({ userEmail: activeChatEmail, text: t, sender: 'admin', timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         document.getElementById('admin-reply-input').value = '';
     }
 </script>
