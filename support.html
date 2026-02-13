@@ -10,93 +10,103 @@
     <script src="script.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
             background: #002366; 
             margin: 0; 
-            font-family: sans-serif; 
+            font-family: -apple-system, system-ui, sans-serif; 
             height: 100vh; 
             display: flex; 
             flex-direction: column;
-            overflow: hidden; /* Stops the whole page from bouncing */
+            overflow: hidden;
         }
         
-        /* Header stays at top */
         .header { 
-            padding: 15px; 
+            padding: 12px 15px; 
             display: flex; 
             align-items: center; 
-            gap: 10px; 
+            gap: 12px; 
             color: white; 
             background: #002366;
         }
-        .header h2 { margin: 0; font-size: 16px; }
+        .header h2 { margin: 0; font-size: 16px; font-weight: 600; }
 
-        /* Chat area scrolls in the middle */
         #box { 
             flex: 1; 
-            background: #f4f7f9; 
-            border-top-left-radius: 20px; 
-            border-top-right-radius: 20px; 
+            background: #f8f9fa; 
+            border-top-left-radius: 25px; 
+            border-top-right-radius: 25px; 
             padding: 15px; 
             overflow-y: auto; 
             display: flex; 
             flex-direction: column; 
-            gap: 10px;
-            padding-bottom: 80px; /* Space so messages don't hide behind input */
+            gap: 8px;
+            padding-bottom: 90px;
         }
 
-        .msg { padding: 10px 14px; border-radius: 15px; font-size: 14px; max-width: 80%; line-height: 1.4; }
-        .rec { background: white; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
+        /* Message Styling */
+        .msg { padding: 8px 12px; border-radius: 12px; font-size: 14px; max-width: 85%; line-height: 1.4; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+        .rec { background: white; color: #111; align-self: flex-start; border-bottom-left-radius: 2px; }
         .sen { background: #002366; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        
+        .tag { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #3498db; margin-bottom: 3px; display: block; }
 
-        /* Footer stays locked at the bottom */
         .footer { 
             position: fixed; 
             bottom: 0; 
             width: 100%; 
             background: white; 
-            padding: 10px; 
+            padding: 12px; 
             display: flex; 
             gap: 8px; 
-            border-top: 1px solid #ddd;
+            border-top: 1px solid #eee;
+            align-items: center;
         }
         input { 
             flex: 1; 
-            padding: 12px; 
-            border-radius: 20px; 
-            border: 1px solid #ccc; 
+            padding: 12px 15px; 
+            border-radius: 25px; 
+            border: 1px solid #e0e0e0; 
             outline: none; 
             font-size: 16px; 
+            background: #f1f3f4;
         }
         button { 
             background: #002366; 
             color: white; 
             border: none; 
-            width: 45px; 
-            height: 45px; 
+            width: 42px; 
+            height: 42px; 
             border-radius: 50%; 
-            font-size: 18px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <a href="dashboard.html" style="color:white; text-decoration:none;"><i class="fa fa-arrow-left"></i></a>
-        <h2>Support</h2>
+        <a href="dashboard.html" style="color:white;"><i class="fa fa-chevron-left"></i></a>
+        <h2>Support Center</h2>
     </div>
 
-    <div id="box"></div>
+    <div id="box">
+        </div>
 
     <div class="footer">
-        <input type="text" id="in" placeholder="Message...">
+        <input type="text" id="in" placeholder="Type a message...">
         <button onclick="send()"><i class="fa fa-paper-plane"></i></button>
     </div>
 
     <script>
         const box = document.getElementById('box');
-        const welcome = "Hello! How can we help you?"; // Small welcome message
+        // Sharp, small welcome message with a "Support" tag
+        const welcomeHtml = `
+            <div class="msg rec">
+                <span class="tag">System Agent</span>
+                How can we help you today?
+            </div>`;
 
         auth.onAuthStateChanged(user => {
             if(user) {
@@ -105,9 +115,14 @@
                     snap.forEach(doc => msgs.push(doc.data()));
                     msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
                     
-                    let h = `<div class="msg rec">${welcome}</div>`;
+                    let h = welcomeHtml;
                     msgs.forEach(m => {
-                        h += `<div class="msg ${m.sender==='user'?'sen':'rec'}">${m.text || m.message}</div>`;
+                        const isUser = m.sender === 'user';
+                        h += `
+                            <div class="msg ${isUser ? 'sen' : 'rec'}">
+                                ${!isUser ? '<span class="tag">Support</span>' : ''}
+                                ${m.text || m.message}
+                            </div>`;
                     });
                     box.innerHTML = h;
                     box.scrollTop = box.scrollHeight;
@@ -128,6 +143,8 @@
             });
             box.scrollTop = box.scrollHeight;
         }
+
+        document.getElementById('in').addEventListener("keypress", (e) => { if(e.key === "Enter") send(); });
     </script>
 </body>
 </html>
