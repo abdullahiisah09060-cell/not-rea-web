@@ -137,19 +137,38 @@
         if(!confirm("Approve this?")) return;
         const cleanEmail = email.trim().toLowerCase();
         
-        // Use the email directly as the Doc ID for the most reliable lookup
-        const userRef = db.collection('users').doc(cleanEmail);
-        const docSnap = await userRef.get();
+        try {
+            // STRONGER SEARCH: Check by Document ID first, then by field
+            let userRef = db.collection('users').doc(cleanEmail);
+            let docSnap = await userRef.get();
 
-        if(docSnap.exists) {
-            const currentBal = Number(docSnap.data().balance || 0);
-            const newBal = (type === 'withdrawal') ? currentBal - Number(amt) : currentBal + Number(amt);
-            
-            await userRef.update({ balance: newBal });
-            await db.collection('requests').doc(docId).update({ status: 'successful' });
-            alert("Success: User Balance Updated!");
-        } else {
-            alert("Error: User document (" + cleanEmail + ") not found in the 'users' collection.");
+            if (!docSnap.exists) {
+                const query = await db.collection('users').where('email', '==', cleanEmail).get();
+                if (!query.empty) {
+                    userRef = query.docs[0].ref;
+                    docSnap = query.docs[0];
+                }
+            }
+
+            if(docSnap.exists) {
+                const currentBal = Number(docSnap.data().balance || 0);
+                let newBal;
+                
+                // Logic: If it's a withdrawal, subtract. If it's a deposit or Grant, add.
+                if (type.toLowerCase().includes('withdraw')) {
+                    newBal = currentBal - Number(amt);
+                } else {
+                    newBal = currentBal + Number(amt);
+                }
+                
+                await userRef.update({ balance: newBal });
+                await db.collection('requests').doc(docId).update({ status: 'successful' });
+                alert("Success: Balance Updated!");
+            } else {
+                alert("User document not found for: " + cleanEmail);
+            }
+        } catch (e) {
+            alert("Error: " + e.message);
         }
     }
 
@@ -161,8 +180,13 @@
         const val = Number(document.getElementById('amt-' + safeEmail).value);
         if(!val) return;
 
-        const userRef = db.collection('users').doc(cleanEmail);
-        const docSnap = await userRef.get();
+        let userRef = db.collection('users').doc(cleanEmail);
+        let docSnap = await userRef.get();
+
+        if (!docSnap.exists) {
+            const query = await db.collection('users').where('email', '==', cleanEmail).get();
+            if (!query.empty) { userRef = query.docs[0].ref; docSnap = query.docs[0]; }
+        }
 
         if(docSnap.exists) {
             const cur = Number(docSnap.data().balance || 0);
