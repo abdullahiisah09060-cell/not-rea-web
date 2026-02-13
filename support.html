@@ -3,45 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Support</title>
+    <title>SBA Support</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="script.js"></script>
     <style>
         body { background: #001a41; margin: 0; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; }
-        .chat-container { width: 95%; max-width: 400px; height: 90vh; background: #f0f2f5; margin-top: 20px; border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; }
+        .chat-container { width: 95%; max-width: 400px; background: #f0f2f5; height: 90vh; margin-top: 20px; border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; }
         .head { background: #002d72; color: white; padding: 15px; font-weight: bold; }
         #box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         .msg { padding: 10px; border-radius: 10px; font-size: 14px; max-width: 80%; }
-        .rec { background: white; align-self: flex-start; }
-        .sen { background: #002d72; color: white; align-self: flex-end; }
-        .input-box { background: white; padding: 10px; display: flex; gap: 5px; }
+        .rec { background: white; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .sen { background: #002d72; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .footer { background: white; padding: 10px; display: flex; gap: 5px; }
         input { flex: 1; padding: 10px; border-radius: 20px; border: 1px solid #ddd; outline: none; }
     </style>
 </head>
 <body>
     <div class="chat-container">
-        <div class="head">SBA Support Center</div>
+        <div class="head">SBA Support Agent</div>
         <div id="box"></div>
-        <div class="input-box">
+        <div class="footer">
             <input type="text" id="in" placeholder="How can we help?">
-            <button onclick="send()" style="border:none; background:none; font-size:20px;">➤</button>
+            <button onclick="send()" style="border:none; background:none; font-size:20px; cursor:pointer;">➤</button>
         </div>
     </div>
-    <script src="script.js"></script>
     <script>
-        const welcome = "Welcome to SBA Support! 👋 Our team is online. How can we help you with your application or balance today?";
-        
+        const box = document.getElementById('box');
+        const welcome = "Hello! 👋 Welcome to SBA Support. How can we help you today?";
+
         auth.onAuthStateChanged(user => {
             if(user) {
-                db.collection('chats').where('userEmail', '==', user.email).orderBy('timestamp', 'asc').onSnapshot(snap => {
-                    let h = `<div class="msg rec">${welcome}</div>`;
-                    snap.forEach(doc => {
-                        const m = doc.data();
-                        h += `<div class="msg ${m.sender==='user'?'sen':'rec'}">${m.text || m.message}</div>`;
+                db.collection('chats').where('userEmail', '==', user.email).onSnapshot(snap => {
+                    let msgs = [];
+                    snap.forEach(doc => msgs.push(doc.data()));
+                    // Sort manually to avoid Firestore index requirement
+                    msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+                    
+                    let html = `<div class="msg rec">${welcome}</div>`;
+                    msgs.forEach(m => {
+                        html += `<div class="msg ${m.sender==='user'?'sen':'rec'}">${m.text || m.message}</div>`;
                     });
-                    document.getElementById('box').innerHTML = h;
-                    document.getElementById('box').scrollTop = 99999;
+                    box.innerHTML = html;
+                    box.scrollTop = box.scrollHeight;
                 });
             } else { window.location.href="index.html"; }
         });
