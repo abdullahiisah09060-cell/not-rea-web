@@ -15,7 +15,7 @@
         .tab { flex: 1; padding: 15px; text-align: center; font-size: 12px; font-weight: bold; color: #888; cursor: pointer; }
         .tab.active { color: #3498db; border-bottom: 3px solid #3498db; background: rgba(52, 152, 219, 0.1); }
         .content-area { padding: 15px; }
-        .card { background: #161a1e; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #2c2f36; }
+        .card { background: #161a1e; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #2c2f36; position: relative; }
         .btn { border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .chat-input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #3498db; background: #0b0e11; color: white; outline: none; }
         #chat-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0e11; z-index: 1000; flex-direction: column; }
@@ -23,6 +23,7 @@
         .m-bubble { padding: 10px; border-radius: 10px; max-width: 80%; font-size: 14px; }
         .m-user { background: #2c2f36; align-self: flex-start; }
         .m-admin { background: #3498db; align-self: flex-end; }
+        .red-dot { position: absolute; top: 10px; right: 10px; width: 12px; height: 12px; background: #e74c3c; border-radius: 50%; box-shadow: 0 0 10px #e74c3c; }
     </style>
 </head>
 <body>
@@ -79,7 +80,7 @@
                 const r = doc.data();
                 h += `<div class="card">
                     <b>${r.email}</b><br><small>${r.type}</small><br>
-                    <span style="color:#2ecc71">$${r.amount}</span><br><br>
+                    <span style="color:#2ecc71">$${Number(r.amount).toLocaleString()}</span><br><br>
                     <button class="btn" style="background:#2ecc71; color:white; width:45%" onclick="approve('${doc.id}', '${r.email}', ${r.amount}, '${r.type}')">APPROVE</button>
                     <button class="btn" style="background:#e74c3c; color:white; width:45%" onclick="decline('${doc.id}')">DECLINE</button>
                 </div>`;
@@ -92,32 +93,38 @@
             let h = '';
             snap.forEach(doc => {
                 const u = doc.data();
-                const displayEmail = u.email || doc.id;
-                const safeEmail = displayEmail.replace(/[^a-z0-9]/g,'');
+                const dEmail = u.email || doc.id;
+                const safeEmail = dEmail.replace(/[^a-z0-9]/g,'');
                 h += `<div class="card">
-                    <b>${u.fullName || 'User'}</b><br><small>${displayEmail}</small><br>
+                    <b>${u.fullName || 'User'}</b><br><small>${dEmail}</small><br>
                     <b style="color:#3498db">$${Number(u.balance || 0).toLocaleString()}</b>
                     <div style="margin-top:10px; display:flex; gap:5px;">
-                        <input type="number" id="amt-${safeEmail}" class="chat-input" placeholder="Amount">
-                        <button class="btn" style="background:#3498db; color:white" onclick="editBal('${displayEmail}', 'add')">+</button>
-                        <button class="btn" style="background:#888; color:white" onclick="editBal('${displayEmail}', 'sub')">-</button>
+                        <input type="number" id="amt-${safeEmail}" class="chat-input" placeholder="Amt" style="width:70px">
+                        <button class="btn" style="background:#3498db; color:white" onclick="editBal('${dEmail}', 'add')">+</button>
+                        <button class="btn" style="background:#888; color:white" onclick="editBal('${dEmail}', 'sub')">-</button>
                     </div>
                 </div>`;
             });
             document.getElementById('user-list').innerHTML = h || '<p>No users found.</p>';
         });
 
-        // MESSAGE LIST
+        // MESSAGE LIST WITH RED DOT LOGIC
         db.collection('chats').onSnapshot(snap => {
             let groups = {};
-            snap.forEach(doc => { 
-                let data = doc.data();
-                if(!groups[data.userEmail]) groups[data.userEmail] = data; 
+            snap.forEach(doc => {
+                let m = doc.data();
+                // Get the most recent message for each user
+                if (!groups[m.userEmail] || (m.timestamp?.seconds > groups[m.userEmail].timestamp?.seconds)) {
+                    groups[m.userEmail] = m;
+                }
             });
             let h = '';
             for (let email in groups) {
-                h += `<div class="card" onclick="openChat('${email}')" style="cursor:pointer">
-                    <b>${email}</b><br><small>${groups[email].text || 'New message'}</small>
+                const needsReply = groups[email].sender === 'user';
+                h += `<div class="card" onclick="openChat('${email}')" style="cursor:pointer; border-left: ${needsReply ? '5px solid #e74c3c' : '1px solid #2c2f36'}">
+                    ${needsReply ? '<div class="red-dot"></div>' : ''}
+                    <b>${email}</b><br>
+                    <small style="${needsReply ? 'color:white; font-weight:bold' : 'color:#888'}">${groups[email].text || 'New message'}</small>
                 </div>`;
             }
             document.getElementById('admin-chat-area').innerHTML = h || '<p>No chats.</p>';
@@ -125,16 +132,16 @@
     }
 
     async function approve(docId, email, amt, type) {
-        if(!confirm("Approve?")) return;
+        if(!confirm("Approve this?")) return;
         const q = await db.collection('users').where('email', '==', email).get();
         if(!q.empty) {
             const userRef = q.docs[0].ref;
             const cur = Number(q.docs[0].data().balance || 0);
-            const newBal = (type === 'withdrawal') ? cur - amt : cur + amt;
+            const newBal = (type === 'withdrawal') ? cur - Number(amt) : cur + Number(amt);
             await userRef.update({ balance: newBal });
             await db.collection('requests').doc(docId).update({ status: 'successful' });
-            alert("Success!");
-        } else { alert("User not found: " + email); }
+            alert("Success: Balance Updated");
+        } else { alert("User document not found for: " + email); }
     }
 
     async function decline(id) { await db.collection('requests').doc(id).update({ status: 'declined' }); }
