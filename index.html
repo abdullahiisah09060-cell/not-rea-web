@@ -57,9 +57,13 @@
     <script src="script.js"></script>
 
     <script>
+        // --- MULTI-ADMIN REDIRECT LOGIC ---
         auth.onAuthStateChanged(user => {
             if (user) {
-                if (user.email === "abdullahiisah09060@gmail.com") {
+                const admin1 = "abdullahiisah09060@gmail.com";
+                const admin2 = "battlefieldbusinesscentre@gmail.com";
+                
+                if (user.email === admin1 || user.email === admin2) {
                     window.location.href = 'admin_dashboard.html';
                 } else {
                     window.location.href = 'dashboard.html';
@@ -67,6 +71,7 @@
             }
         });
 
+        // --- UI TAB TOGGLE ---
         function showTab(type) {
             const loginSec = document.getElementById('login-section');
             const signupSec = document.getElementById('signup-section');
@@ -81,6 +86,7 @@
             }
         }
 
+        // --- SIGNUP PROCESS ---
         async function signup() {
             const name = document.getElementById('s-name').value;
             const email = document.getElementById('s-email').value.trim().toLowerCase();
@@ -97,6 +103,7 @@
             try {
                 const cred = await auth.createUserWithEmailAndPassword(email, pass);
                 
+                // Using email as Document ID for easy retrieval in Admin Panel
                 await db.collection('users').doc(email).set({
                     fullName: name,
                     email: email,
@@ -114,6 +121,7 @@
             }
         }
 
+        // --- LOGIN PROCESS ---
         async function login() {
             const email = document.getElementById('l-email').value.trim().toLowerCase();
             const pass = document.getElementById('l-pass').value;
